@@ -4,11 +4,6 @@ description: "karni-ai, an optional Karni module: a language model reads text, a
 
 # AI extraction (karni-ai)
 
-!!! warning "Experimental"
-    The karni-ai module and `@karni/ai-ui` are
-    [experimental](stability.md#experimental-names): their names may change
-    in a minor release, with a CHANGELOG entry.
-
 karni-ai turns a source into rows of one of your resources. The source is a
 text, a web page or a PDF. A language model reads it and answers JSON that
 follows the resource's own schema. Karni validates the answer and hands the
@@ -260,6 +255,10 @@ REST_FRAMEWORK = {
 ```
 
 ## React
+
+!!! warning "Experimental"
+    `@karni/ai-ui` is [experimental](stability.md#experimental-names): a name may
+    change in a minor release, with a CHANGELOG entry.
 
 `@karni/ai-ui` has `ExtractButton`: a button that opens a dialog with a
 form per source, shows the preview (the proposed rows, the problems, the

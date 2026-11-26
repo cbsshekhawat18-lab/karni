@@ -1,5 +1,5 @@
 ---
-description: "The people contract in Karni (experimental): one Person per human and one Organisation per company for every part of a project, found or created by email with people.resolve, linked to an account once its email is verified, with person facts in SQL, duplicates, merge with a preview and hooks, erase on request, an API, an admin and a shared seed pool."
+description: "The people contract in Karni: one Person per human and one Organisation per company for every part of a project, found or created by email with people.resolve, linked to an account once its email is verified, with person facts in SQL, duplicates, merge with a preview and hooks, erase on request, an API, an admin and a shared seed pool."
 ---
 
 # People

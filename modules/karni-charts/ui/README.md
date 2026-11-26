@@ -4,7 +4,7 @@ React components for the Karni charts module: SavedChart and its hook.
 
 [![npm](https://img.shields.io/npm/v/@karni/charts-ui)](https://www.npmjs.com/package/@karni/charts-ui) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/charts/)
 
-A chart saved in the admin with the [karni-charts](https://pypi.org/project/karni-charts/) module, drawn with `@karni/ui`'s `DataChart` from its source resource's aggregate. **Experimental.**
+A chart saved in the admin with the [karni-charts](https://pypi.org/project/karni-charts/) module, drawn with `@karni/ui`'s `DataChart` from its source resource's aggregate.
 
 ```bash
 npm install @karni/charts-ui

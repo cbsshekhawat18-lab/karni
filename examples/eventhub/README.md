@@ -163,7 +163,7 @@ pickers). EventHub adds:
   (`ResourceTable params={{ event: id }}`) and the CSV export link.
 - `login.tsx`: @karni/ui's `LoginForm`, from `karni make page login --kind login`.
 - `venue-overview.tsx` (47 lines): a dashboard of rows the page computes from
-  one venues list, with the page blocks (experimental): a `DashboardGrid` of a
+  one venues list, with the page blocks: a `DashboardGrid` of a
   `ChartCard` (seats per venue), a `ComparisonTable` (the three largest
   venues) and a `DataTable` of seats per city, which sorts and exports CSV and
   XLSX.

@@ -1,5 +1,5 @@
 ---
-description: "@karni/game/collide (experimental): kinematic collision for 2D browser games. Axis-aligned boxes and circles, overlap and contact tests, segment and sweep tests, a ray cast, a box mover that slides against solid boxes with one-way ledges, and trigger zones. No rigid-body physics."
+description: "@karni/game/collide: kinematic collision for 2D browser games. Axis-aligned boxes and circles, overlap and contact tests, segment and sweep tests, a ray cast, a box mover that slides against solid boxes with one-way ledges, and trigger zones. No rigid-body physics."
 ---
 
 # Collision (@karni/game/collide)

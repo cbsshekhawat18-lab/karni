@@ -33,20 +33,20 @@ carries it, and `pytest
 | `viewset-access` | a `BaseViewSet` serving a model (`model`/`queryset` set, or routed) has no `access` (inherited declarations and an overridden `get_access()` count) | add `access = Access(read=..., write=...)`, or `Unscoped(reason=...)` |
 | `access-override` | a class overrides `filter_queryset_for_user` | express the row rule in `access` (`Where(...)`), or opt out with the reason |
 | `unpaginated-action` | an `@action` (or a view's `list`) serialises `many=True` (without `data=`) and never calls `paginate_queryset` / `paginated_response` / `get_paginated_response` | `return self.paginated_response(queryset)` |
-| `query-scaling` | a routed project `BaseViewSet`'s `list`, `retrieve` or `aggregate` (with an [aggregation](aggregations.md), experimental) runs more queries with 12 rows than with 2 (an N+1). Needs a test database | let the serializer show the relation, or hint it with `select_related` / `prefetch_related` |
+| `query-scaling` | a routed project `BaseViewSet`'s `list`, `retrieve` or `aggregate` (with an [aggregation](aggregations.md)) runs more queries with 12 rows than with 2 (an N+1). Needs a test database | let the serializer show the relation, or hint it with `select_related` / `prefetch_related` |
 | `admin-convention` | a registered admin for a project model isn't a `KarniModelAdmin` | use `AdminMeta` on the model, or subclass `KarniModelAdmin` |
 | `raw-sql` | `.raw()`, `cursor.execute()`, `RawSQL` outside `sql_allowed` dirs | move it under `*/sql/*`, or opt out |
 | `http-client` | `requests`/`httpx`/`urllib.request` imported outside `http_allowed` | call providers from a `*/services/*` module |
 | `redundant-serializer` | a Meta-only ModelSerializer identical to the generated one | delete it, since `BaseViewSet(model=X)` generates it |
 | `audited-bulk-write` | `<AuditedModel>.objects…update()` or `.bulk_update()` in project code. Signals do not fire, so no change-history entry is written | save the instances, or opt out with the reason |
-| `hand-written-tree` (experimental) | a project model has a `parent` (or `parent_*`) foreign key to itself and is not a `TreeModel` | inherit `karni.models.TreeModel` first and drop the field (see [tree models](models.md#tree-models)), or opt out with the reason |
-| `part-imports-part` (experimental, K315) | a file of one [family part](family.md) (its app folder or `frontend/src/<prefix>/`) imports another part's code or names its app label: `"crm.Deal"`, `"crm.deal:own"`, `"crm:deal-list"`, `"crm/x.html"`, `apps.get_model("crm", ...)`, a migration dependency, a template `include`, `extends` or `url`, a frontend import. The contracts (`karni.people`, `karni.events`, `karni.timeline`, `karni.preferences`, `karni_commerce`) are not parts and are always allowed | use a contract and a connection in `<prefix>/connections.py`, or opt out with the reason (`//` in TypeScript, `{# #}` in a template) |
-| `part-role-prefix` (experimental, K315) | in a project with two or more parts, a part after the first declares a role that is not `<prefix>-<role>` and not `admin` or `customer` | rename it in karni.yaml and rebuild |
-| `part-route` (experimental, K315) | a part's base route (`apps.<label>.route`) is a family page's route or another app's, or one of its generated pages in routes.tsx is outside its base | give the app its own route and rebuild |
+| `hand-written-tree` | a project model has a `parent` (or `parent_*`) foreign key to itself and is not a `TreeModel` | inherit `karni.models.TreeModel` first and drop the field (see [tree models](models.md#tree-models)), or opt out with the reason |
+| `part-imports-part` (K315) | a file of one [family part](family.md) (its app folder or `frontend/src/<prefix>/`) imports another part's code or names its app label: `"crm.Deal"`, `"crm.deal:own"`, `"crm:deal-list"`, `"crm/x.html"`, `apps.get_model("crm", ...)`, a migration dependency, a template `include`, `extends` or `url`, a frontend import. The contracts (`karni.people`, `karni.events`, `karni.timeline`, `karni.preferences`, `karni_commerce`) are not parts and are always allowed | use a contract and a connection in `<prefix>/connections.py`, or opt out with the reason (`//` in TypeScript, `{# #}` in a template) |
+| `part-role-prefix` (K315) | in a project with two or more parts, a part after the first declares a role that is not `<prefix>-<role>` and not `admin` or `customer` | rename it in karni.yaml and rebuild |
+| `part-route` (K315) | a part's base route (`apps.<label>.route`) is a family page's route or another app's, or one of its generated pages in routes.tsx is outside its base | give the app its own route and rebuild |
 | `duplicate` | ≥ `min_statements` structurally identical statements in two places | reuse the named Karni API, or extract one implementation |
 | `opt-out-reason` | any opt-out marker without a reason | write the reason |
 
-`model-base` and `query-scaling` (experimental) leave out a model over a
+`model-base` and `query-scaling` leave out a model over a
 table or view another system owns: `class Karni: external = True` together
 with `Meta.managed = False` on a plain `models.Model`. Without
 `managed = False` the model still fails `model-base`, and `karni.E270` says
@@ -122,12 +122,6 @@ KARNI_ARCHITECTURE = {
 
 ## The check cache
 
-!!! warning "Experimental"
-    The check cache, `karni check --changed` and `--no-cache`, `manage.py
-    karni_check --changed` and `--no-cache`, `.karni/local/check-cache.json`,
-    `karni.testing.checkcache` and the setting `KARNI_CHECK_CACHE` are
-    [experimental](stability.md#experimental-names).
-
 On a large project `karni check` would read every file on every run. It keeps
 the results of the checks that read files one by one in
 `.karni/local/check-cache.json` (machine-local, ignored by git), under each
@@ -169,10 +163,6 @@ path, compute)`.
 
 ## Integer keys on a public resource
 
-!!! warning "Experimental"
-    `karni.W530` belongs to [integer keys](models.md#choosing-the-key-type),
-    which are [experimental](stability.md#experimental-names).
-
 `karni check` (and every `manage.py check`) warns with `karni.W530` for a
 routed `BaseViewSet` whose model has an integer primary key
 (`BigIntBaseModel`, an `AutoField`), whose detail route looks rows up by that
@@ -198,7 +188,7 @@ A marker without a reason does not silence it. `'karni.W530'` in
 
 ## Suggestions
 
-Experimental. Rules fail a build. Suggestions never do. `karni check`,
+Rules fail a build. Suggestions never do. `karni check`,
 `karni doctor` and `karni suggest` end with a compact block of what Karni
 could do that the project does by hand, each with its file and line and the
 exact command or change. A suggestion never changes an exit code.
@@ -295,7 +285,7 @@ ESLint >= 9, via `configs.recommended`) ships four rules, all `"error"`:
 | Rule | Fails when | Fix |
 |---|---|---|
 | `karni/no-raw-elements` | raw `<table>/<form>/<input>/<select>/<textarea>/<details>` JSX outside the UI package | compose `ResourceTable` (a resource) or `DataTable` / `ComparisonTable` (computed rows), `Accordion` for `<details>`, `ResourceForm`/`Input`/… |
-| `karni/max-page-lines` | a file under `**/pages/**` exceeds 50 physical lines (option `maxLines`) | use the components' props (on a dashboard the [page blocks](ui.md#page-blocks-experimental)), and move logic into hooks |
+| `karni/max-page-lines` | a file under `**/pages/**` exceeds 50 physical lines (option `maxLines`) | use the components' props (on a dashboard the [page blocks](ui.md#page-blocks)), and move logic into hooks |
 | `karni/no-deep-imports` | any import from `@karni/ui/dist/*` or `@karni/ui/src/*` | import the public barrel `@karni/ui` |
 | `karni/no-direct-http` | `fetch`/`axios`/`XMLHttpRequest`/`new WebSocket` outside `allowPatterns` (default `**/api/**`) | use the generated typed hooks / `KarniClient` |
 

@@ -1,5 +1,5 @@
 ---
-description: "Demo mode (karni.demo, experimental): put a project online for anyone to try. Demo accounts with one login per role, a write rule that lets only those accounts write, a data reset every N hours, one boot command, the sign-in notice in @karni/ui, every setting, escape hatch and error code."
+description: "Demo mode (karni.demo): put a project online for anyone to try. Demo accounts with one login per role, a write rule that lets only those accounts write, a data reset every N hours, one boot command, the sign-in notice in @karni/ui, every setting, escape hatch and error code."
 ---
 
 # Demo mode
@@ -8,7 +8,7 @@ Demo mode makes a project safe to publish for anyone to try. Visitors sign in
 with a public demo login, change data, and the next visitor still finds a
 working app, because the data goes back to its starting state on a schedule.
 
-It is **experimental** ([stability](stability.md#experimental-names)). Every
+Every
 Karni demo shares it: the [shop demo](demo.md) is the first, and a project adds
 only its accounts and settings.
 

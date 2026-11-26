@@ -162,7 +162,9 @@ sender's transaction. For one app reacting to another app that may not be
 installed, use [family events](family-events.md) instead: subscribers name the
 event as a string, and each runs after the commit in its own transaction.
 
-## Emails at business moments (experimental)
+<a id="emails-at-business-moments-experimental"></a>
+
+## Emails at business moments
 
 A confirmation, a shipping notice or a reminder is a listener that sends a
 template the project can edit. `karni.mail.send_templated` renders

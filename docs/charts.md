@@ -1,16 +1,8 @@
 ---
-description: "karni-charts (experimental): saved charts defined and previewed in the Django admin, served through each resource's aggregate action under that resource's access, and drawn in React with SavedChart from @karni/charts-ui."
+description: "karni-charts: saved charts defined and previewed in the Django admin, served through each resource's aggregate action under that resource's access, and drawn in React with SavedChart from @karni/charts-ui."
 ---
 
 # Saved charts (karni-charts)
-
-!!! warning "Experimental"
-    The karni-charts module is [experimental](stability.md#experimental-names):
-    the `Chart` model and its admin, `/api/charts/` and its `data` action,
-    `karni_charts.services`, the `KARNI_CHARTS_READ` setting and
-    `@karni/charts-ui` (`SavedChart`, `useSavedChart`). They may change in a
-    minor release, with a CHANGELOG entry. The `CHART` codes keep their
-    meaning.
 
 A dashboard's charts change more often than its code: someone wants revenue
 by quarter instead of by month, the top five regions, one more filter.

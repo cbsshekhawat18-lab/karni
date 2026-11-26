@@ -17,9 +17,9 @@ what they return.
 | Command | What it returns |
 |---|---|
 | `karni context` | Live inventory: APPS, MODELS, VIEWSETS, COMPONENTS, HOOKS, PAGES, SITE (the public site's routes), MODULES, CATALOG (a line per module and built-in feature, with whether the project has it: [the module catalog](modules.md#the-module-catalog)), BASES |
-| `karni context --summary` / `--app LABEL` / `--model NAME` | One area of a large project at a time: a line per app, one app in full, one model in depth. `--max-tokens N` cuts at whole sections (experimental, [below](#large-projects-one-area-at-a-time)) |
-| `karni modules list` / `show NAME` | The module catalog: every module and feature with its options and the questions to ask (experimental) |
-| `karni recipes list --match "<request>"` / `show NAME` | The recipes a new app starts from, ranked for a one-line request, and the blank start ([the /new-app flow](#agents-the-new-app-flow), experimental) |
+| `karni context --summary` / `--app LABEL` / `--model NAME` | One area of a large project at a time: a line per app, one app in full, one model in depth. `--max-tokens N` cuts at whole sections ([below](#large-projects-one-area-at-a-time)) |
+| `karni modules list` / `show NAME` | The module catalog: every module and feature with its options and the questions to ask |
+| `karni recipes list --match "<request>"` / `show NAME` | The recipes a new app starts from, ranked for a one-line request, and the blank start ([the /new-app flow](#agents-the-new-app-flow)) |
 | `karni rules` | Every convention as `CODE summary` (about 626 tokens for Karni's own rules, measured) |
 | `karni rules --explain K101` | One rule in full: statement, why, fix, enforcing rule id |
 | `karni rules --procedure new-model` | The steps of a standard procedure |
@@ -49,11 +49,6 @@ Path allowances use the documented defaults (`*/sql/*`, `*/services/*`,
 `src/api/`), matched relative to the project root.
 
 ### Large projects: one area at a time
-
-!!! warning "Experimental"
-    `karni context --summary`, `--app`, `--model` and `--max-tokens`, and
-    `manage.py karni_context`'s flags of the same names, are
-    [experimental](stability.md#experimental-names).
 
 On a project with a hundred models or more the inventory caps the models it
 lists. Read one area at a time instead:
@@ -239,7 +234,7 @@ traceback or log line) and `queries(endpoint, as_user="", method="GET",
 data="", explain=False)` (`karni queries`). Rules K013 and K014 tell an agent
 to call them before reading a traceback or hunting an N+1 by hand.
 
-For the [/new-app flow](#agents-the-new-app-flow) (experimental):
+For the [/new-app flow](#agents-the-new-app-flow):
 `recipes(match="", name="")`, `spec_validate(path="")`, `questions(spec="",
 max=5)`, `answer(id, value, spec="")`, `plan(spec="")`, `build(spec="",
 dry_run=False, allow_destructive=False)` and `modules(name="")`. Each returns

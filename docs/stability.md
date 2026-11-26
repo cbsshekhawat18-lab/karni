@@ -317,7 +317,7 @@ Experimental now:
   and `KARNI_SEED_LEDGER` settings, with the seed volume of `karni plan`
   (`karni_cli.spec.plan.seed_time_class`, the `seed_bulk_threshold` fact).
   No project or example uses it yet.
-- [The scaling check](testing.md#3-the-scaling-check): `KARNI_SCALING_ROWS`,
+- [The scaling settings](testing.md#3-the-scaling-check): `KARNI_SCALING_ROWS`,
   `karni.performance.Scaling`, `scaling_rows`, `query_scaling` on a viewset,
   and `ScalingResult`'s `rows`, `seconds`, `budget`, `endpoint`, `too_slow`
   and `slow_message()`. No project or example uses it yet.

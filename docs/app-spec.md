@@ -1,22 +1,8 @@
 ---
-description: "The Karni app spec, karni.yaml (experimental): one small file that describes an app in the terms karni make, karni add and the settings use, with karni spec validate, karni spec export, karni plan and its questions, karni build, recipes, the MCP tools and published JSON Schemas."
+description: "The Karni app spec, karni.yaml: one small file that describes an app in the terms karni make, karni add and the settings use, with karni spec validate, karni spec export, karni plan and its questions, karni build, recipes, the MCP tools and published JSON Schemas."
 ---
 
 # The app spec: `karni.yaml`
-
-!!! warning "Experimental"
-    Everything on this page is [experimental](stability.md#experimental-names):
-    the `karni.yaml` format, `karni spec validate`, `karni spec export`,
-    `karni plan`, `karni plan --questions`, `karni spec answer`, `karni
-    build`, `manage.py karni_facts`, `manage.py karni_rows`, `manage.py
-    karni_makemigrations`, `karni.facts`, the `karni_cli.spec` and
-    `karni_cli.builder` packages, `.karni/build.json`, [recipes](#recipes)
-    (`karni recipes`, the recipe format, the `karni.recipes` entry points,
-    `karni_cli.recipes`, the [built-in recipes](recipes/index.md) and `karni
-    new --recipe`), [the MCP tools](#mcp-tools) of the flow
-    (`karni_cli.agent_tools`) and the seven JSON Schemas. They may change in
-    a minor release, and each change is in the CHANGELOG. The error codes
-    keep their meaning.
 
 A spec is one small file that describes a Karni app: its apps and entities,
 roles, built-in features, modules, pages and menu. An AI agent turns a one-line
@@ -143,10 +129,10 @@ published file differs from the code: regenerate it with
 |---|---|---|
 | `name` | text, required | `karni new "<name>"` |
 | `kind` | `site`, `app` (default) or `site+app` | `karni new --kind` |
-| `recipes` | a list of recipe names. Experimental | the recipes the project holds, in the order they were added. `karni recipes add` and `remove` keep it, and `karni build` writes a new one's own files ([several recipes in one project](family.md)) |
+| `recipes` | a list of recipe names | the recipes the project holds, in the order they were added. `karni recipes add` and `remove` keep it, and `karni build` writes a new one's own files ([several recipes in one project](family.md)) |
 | `recipe` | text. Deprecated | read as `recipes: [<recipe>]` until 1.0, with a `KarniDeprecationWarning`. `karni upgrade` rewrites it |
-| `currency` | an ISO 4217 code such as `EUR`. Experimental | the project's currency: a `money` field without a currency of its own is in it (a `MoneyField(currency=...)`), and the payments module's `currency` follows it. Without `currency`, a bare `money` field keeps a currency per row |
-| `api_version` | a version name such as `v1` (lower case letters, digits and `-`, at most 16 characters). Experimental | `KARNI_API_VERSION`: the API is mounted at `/api/v1/`, with a document and a client per version ([API versions](api.md#api-versions)) |
+| `currency` | an ISO 4217 code such as `EUR` | the project's currency: a `money` field without a currency of its own is in it (a `MoneyField(currency=...)`), and the payments module's `currency` follows it. Without `currency`, a bare `money` field keeps a currency per row |
+| `api_version` | a version name such as `v1` (lower case letters, digits and `-`, at most 16 characters) | `KARNI_API_VERSION`: the API is mounted at `/api/v1/`, with a document and a client per version ([API versions](api.md#api-versions)) |
 
 ### `modules`
 
@@ -179,11 +165,11 @@ takes (`karni modules show <name>` prints each one's questions).
 | `terms` | `{version, url}`, plus `required`, `paths`, `exempt` | `KARNI_TERMS`, [terms acceptance](accounts.md#terms-acceptance) |
 | `user_grants` | `true` / `false` | `KARNI_USER_GRANTS`, [per-user grants](accounts.md#per-user-grants). The grants themselves are data, written in the admin or the API |
 | `api_cache` | `true` / `false`, or `{ttl: <seconds>}` | `KARNI_API_CACHE`, and `KARNI_API_CACHE_TTL` with a `ttl`, [response caching](api.md#response-caching). `true` keeps the default lifetime (300 seconds) |
-| `people` | `true` / `false`. Experimental | `KARNI_PEOPLE`: the [people contract](people.md). A relation to `people.Person` turns it on too |
-| `events` | `true` / `false`. Experimental | `karni.outbox` in the project's `INSTALLED_APPS`: [family events](family-events.md) |
-| `preferences` | `true` / `false`. Experimental | `karni.preferences` in the project's `INSTALLED_APPS`, and `KARNI_PREFERENCES_DEFAULTS` with `app.name`, and `KARNI_PREFERENCES_LOCKED` with `app.currency` (one currency for the project): [preferences](preferences.md) |
-| `timeline` | `true` / `false`. Experimental | `karni.timeline` in the project's `INSTALLED_APPS`: the [timeline](timeline.md). It needs `people` and `events`, so the build installs them too |
-| `notify` | `true` / `false`. Experimental | `karni.notify` in the project's `INSTALLED_APPS`: [notifications](notify.md), the emails a business edits, the inbox and each person's switches. A role's grants may name its models (`notify.emailtemplate`) |
+| `people` | `true` / `false` | `KARNI_PEOPLE`: the [people contract](people.md). A relation to `people.Person` turns it on too |
+| `events` | `true` / `false` | `karni.outbox` in the project's `INSTALLED_APPS`: [family events](family-events.md) |
+| `preferences` | `true` / `false` | `karni.preferences` in the project's `INSTALLED_APPS`, and `KARNI_PREFERENCES_DEFAULTS` with `app.name`, and `KARNI_PREFERENCES_LOCKED` with `app.currency` (one currency for the project): [preferences](preferences.md) |
+| `timeline` | `true` / `false` | `karni.timeline` in the project's `INSTALLED_APPS`: the [timeline](timeline.md). It needs `people` and `events`, so the build installs them too |
+| `notify` | `true` / `false` | `karni.notify` in the project's `INSTALLED_APPS`: [notifications](notify.md), the emails a business edits, the inbox and each person's switches. A role's grants may name its models (`notify.emailtemplate`) |
 
 A feature that needs an extra of `karni` gets it named on the `karni` dependency
 when the build turns it on. If the project's interpreter cannot import it, the
@@ -224,7 +210,7 @@ The scopes are Karni's own:
 | `own:<field>` | the same as `own`, written with the owner field it uses. The field must be the entity's `owner` (`C234`) |
 | `related:<key>` | rows whose scope path `<key>` (the entity's `scope_paths`) equals the user's attribute `<key>` |
 | `custom:<name>` | the rows a scope registered with `register_scope(name, fn)` returns |
-| `tree:<path>` | rows whose `<path>` is a node the user holds or a node below it ([the tree scope](accounts.md#the-tree-scope), experimental). The path follows the entity's relation fields to an entity with `tree: true` or `tree: ordered` (`C620`) |
+| `tree:<path>` | rows whose `<path>` is a node the user holds or a node below it ([the tree scope](accounts.md#the-tree-scope)). The path follows the entity's relation fields to an entity with `tree: true` or `tree: ordered` (`C620`) |
 
 `related:` takes a scope path key, not a path. For rows reached through a
 relation to the user (the bookings of an instructor's sessions), name the
@@ -234,7 +220,7 @@ path in the entity's access: `owned:session__instructor`.
 
 `apps` maps an app label (snake_case) to its `entities`. An entity is a
 model on `BaseModel` (PascalCase), with its viewset. An app also takes
-`route` (experimental): the base path its entity pages are mounted under.
+`route`: the base path its entity pages are mounted under.
 With `route: /crm`, the deals list is `/crm/deals`. Without it each page is
 at `/<route of the entity>`. `karni recipes add` sets `/<label>` for a
 recipe's app, and `karni spec validate` refuses a route two apps share or a
@@ -246,11 +232,11 @@ family page's (`C444`).
 | `key` | a field | `karni make model --key` (`Karni.import_key`) |
 | `help` | a sentence | `Karni.help`: the line the admin shows at the top of the model's list and form. `karni plan` shows it and `karni spec export` reads it back |
 | `search` | a field or a list | `karni make model --search` (the viewset's `search_fields`). `karni build` also writes `search = SearchField(sources=[...])` when every name is a field of the entity, so `?search=` reads an index (`karni.W967`) |
-| `global_search` | `true`, or `{fields, title, subtitle, weight}` | `Karni.search`, [search across models](global-search.md) (experimental). `fields` defaults to `search` |
+| `global_search` | `true`, or `{fields, title, subtitle, weight}` | `Karni.search`, [search across models](global-search.md). `fields` defaults to `search` |
 | `owner` | a relation to the user, or a path (`workspace__members`) | `Karni.owner_field`, the `own` scope's field |
 | `audit` | `true`, or a list of fields | `Karni.audit`, [change history](change-history.md). `karni build` writes a required fk of an audited or financial entity (one with money) as `on_delete=models.PROTECT` (`karni.W965`) |
-| `groups` | title to fields | `Karni.field_groups`: sections of the React form and detail page, fieldsets of the admin (experimental) |
-| `column_sets` | name to fields | `Karni.column_sets`: column presets of the React table (experimental) |
+| `groups` | title to fields | `Karni.field_groups`: sections of the React form and detail page, fieldsets of the admin |
+| `column_sets` | name to fields | `Karni.column_sets`: column presets of the React table |
 | `order` | a field or a list, `-` for descending | `karni make model --order` (`Meta.ordering`) |
 | `scope_paths` | key to lookup path | `Karni.scope_paths`, for the `related:<key>` scope |
 | `access` | `{read, write, create}`, or `code` | the viewset's `access` |
@@ -261,9 +247,9 @@ family page's (`C444`).
 | `database` | an alias of `DATABASES` | `Karni.database` (default: `default`) |
 | `tree` | `true`, `ordered` or `false` | a [tree model](models.md#tree-models): `TreeModel` (`true`) or `OrderedTreeModel` (`ordered`), listed before the base |
 | `taxonomies` | key to a tree entity | `Karni.taxonomies`, [taxonomy tagging](models.md#taxonomies): a many-to-many per key, its filters, facets and the `tree:<key>` scope |
-| `aggregate` | `{group_by, values, metrics}` | `Karni.aggregate`, the [aggregate action](aggregations.md) (experimental) |
+| `aggregate` | `{group_by, values, metrics}` | `Karni.aggregate`, the [aggregate action](aggregations.md) |
 | `cache` | seconds, or `false` | the viewset's [response caching](api.md#response-caching): `cache = Cache(ttl=<seconds>)`, or `cache = Uncached(reason="spec")` for `false` (default: `KARNI_API_CACHE_TTL`) |
-| `bounds` | field to `{min, max}` | `Karni.bounds`, [rules](rules.md#bounds) (experimental): the lowest and highest value of a number, date or datetime |
+| `bounds` | field to `{min, max}` | `Karni.bounds`, [rules](rules.md#bounds): the lowest and highest value of a number, date or datetime |
 | `unique` | a list of field lists, or `{fields, where}` | `Karni.unique`, [rules](rules.md#unique): a partial unique index over the live rows |
 | `targets` | foreign key to a row filter | `Karni.targets`, [rules](rules.md#targets): the rows a relation may point at |
 | `frozen` | field to `true` or a row filter | `Karni.frozen`, [rules](rules.md#frozen): fields that never change, or not in a state |
@@ -278,7 +264,7 @@ parser and renderer, so the spec and the generator can never disagree:
 `datetime`, `url`, `file`, `image`, `uuid`, `choice:a|b`, `fk:Model`,
 `m2m:Model`, `o2o:Model`, `money[:CUR]`, `percent[:min:max]`, `quantity`,
 `email[:unique]`, `slug[:source]`, `phone`, `country`, `currency`,
-`markdown` (a `MarkdownField`, experimental),
+`markdown` (a `MarkdownField`),
 `json[:queried]`, `array:str[:len]`, `state:<a>><b>|...` (a `StateField`,
 written as `karni make form --states` takes it), `daterange`,
 `datetimerange` and `capacity[:total]`, with a trailing `?` for optional.
@@ -297,7 +283,7 @@ download ([protected files](storage.md)): they need `modules: {storage: ...}`
 A relation points at an entity of the same app (`fk:Studio`), of another app
 (`fk:shop.Product`), at the user (`fk:User`), at itself (`fk:self`), or at a
 model of a module the spec adds (`fk:karni_payments.Payment`), or at a model of
-a core contract (`fk:people.Person`, experimental: the build then writes
+a core contract (`fk:people.Person`: the build then writes
 `KARNI_PEOPLE = True`, see [people](people.md)). A model of the project outside
 the spec cannot be named.
 
@@ -328,7 +314,7 @@ deep) needs a `cache` of its own, which says how stale a response may be
 (`C521`). `karni check` refuses the same viewset in the project.
 
 `aggregate` says what [`GET <resource>/aggregate/`](aggregations.md)
-(experimental) may group by and sum, and `karni build` writes it as `class
+may group by and sum, and `karni build` writes it as `class
 Karni: aggregate` in the entity's Karni-owned base:
 
 ```yaml
@@ -347,10 +333,6 @@ migration. Expressions such as `TextNumber` stay in the project's own code:
 `karni spec export` leaves out an aggregate that has them and says so.
 
 ### Trees
-
-!!! warning "Experimental"
-    The `tree` key is experimental, like the
-    [tree models](models.md#tree-models) it builds.
 
 `tree: true` makes the entity a hierarchy: `karni build` writes its model
 base as `class Region(TreeModel, BaseModel)`, which adds a `parent` field,
@@ -375,7 +357,7 @@ A relation to a tree is an ordinary field (`fk:Region`, `m2m:Category`).
 `OrderedTreeModel`. In `karni plan`, making an entity a tree or flat again is
 a risky change, and so is `ordered` back to `true`, which drops `position`.
 
-`groups` and `column_sets` are experimental. `karni build` writes `groups`
+`karni build` writes `groups`
 as the model's `Karni.field_groups`: sections of ResourceForm and
 ResourceDetail and fieldsets of the admin, in the order written, and a field
 left out of every group goes in a last group, Other. `column_sets` become
@@ -384,7 +366,7 @@ set named `default` shows first. A group names fields of the entity, each
 field in one group (`C237`). A set names fields of the entity or `id`,
 `created_at` and `updated_at`, each once (`C680`), under a snake_case name
 (`C681`). Both lay out a model with many fields
-([field groups and column sets](ui.md#field-groups-and-column-sets-experimental)):
+([field groups and column sets](ui.md#field-groups-and-column-sets)):
 
 ```yaml
       Product:
@@ -401,10 +383,6 @@ To show the groups as tabs, set `field_group_layout = "tabs"` in the
 project's subclass: `class Karni(karni.Product.Karni)`.
 
 ### Taxonomies
-
-!!! warning "Experimental"
-    The `taxonomies` key is experimental, like the
-    [taxonomies](models.md#taxonomies) it builds.
 
 `taxonomies` tags an entity to tree entities: each key becomes a
 many-to-many of that name, with the list filters `?<key>=` and
@@ -432,7 +410,7 @@ change: its tags go with its table.
 ### Access
 
 `access` maps onto Karni's [`Access`](api.md#access-control). `read`,
-`write`, `create`, `delete` and `assign` (experimental) each take one of
+`write`, `create`, `delete` and `assign` each take one of
 these, or a list of them, any of which admits:
 
 | In the spec | In the viewset |
@@ -442,7 +420,7 @@ these, or a list of them, any of which admits:
 | `granted` | `Granted()`: what the roles' grants allow |
 | `role:<slug>` | `HasRole("<slug>")`, a role the spec declares (`C232`) |
 | `owned:<field>` | `Owned("<field>")`, a relation or a path that ends at the user (`C240`). A path may follow a reverse relation by the entity's name in lower case: `owned:course__enrolment__student` |
-| `where:<field>`, `where:<field>=<value>` | `Where(Matching(<field>=True))` (experimental): the rows whose field holds the value, for anyone. Drafts: `read: [where:published, owned:instructor, role:staff]` |
+| `where:<field>`, `where:<field>=<value>` | `Where(Matching(<field>=True))`: the rows whose field holds the value, for anyone. Drafts: `read: [where:published, owned:instructor, role:staff]` |
 | a list | the items joined with `\|` |
 
 `read` and `write` default to `granted`, `create` and `delete` to `write`,
@@ -482,15 +460,11 @@ computed `get_access()`.
 | `- about: blank` | `karni make page about`: a bare page at `/about` |
 | `- login: login` | `karni make page login --kind login` |
 | `- reports: code` | a page of the project's own at `/reports`: `karni build` leaves it alone |
-| `- shop.reports: code` | a page of the project's own under the app `shop`'s route, at `/shop/reports` (experimental) |
+| `- shop.reports: code` | a page of the project's own under the app `shop`'s route, at `/shop/reports` |
 
 Two pages may not share a route (`C242`).
 
 ### `navigation`
-
-!!! warning "Experimental"
-    The `navigation` key is experimental, like the
-    [navigation from data](navigation.md) it writes.
 
 `navigation` is the menu: `karni build` writes it to `KARNI_NAVIGATION` in
 the settings block, and `GET /api/navigation/` gives each user the entries
@@ -512,7 +486,7 @@ navigation:
 | Entry | Means |
 |---|---|
 | `- <page>` | the page whose key in `pages` is `<page>` (`Product`, `shop.Product`, `home`, `shop.reports`) |
-| `- <family page>` | a page of Karni and its contracts, not listed in `pages`: `home`, `signin`, `account` and `search` always, `orders`, `cart` and `checkout` with the commerce module, `settings` with `features.preferences`, `people` with `features.people` (labelled Customers in a project whose only part sells), `inbox` with `features.notify` (experimental) |
+| `- <family page>` | a page of Karni and its contracts, not listed in `pages`: `home`, `signin`, `account` and `search` always, `orders`, `cart` and `checkout` with the commerce module, `settings` with `features.preferences`, `people` with `features.people` (labelled Customers in a project whose only part sells), `inbox` with `features.notify` |
 | `- <page>: {label, icon, requires}` | the page, with its label, icon or requirement replaced |
 | `- <label>: [entries]` | a group: a label that names no page, and its entries |
 | `- <label>: {items, icon, requires}` | a group with an icon or a requirement |
@@ -537,7 +511,7 @@ entries does, else `authenticated`. Labels come from the page: `Products` for
 | [C641](errors.md#c641) | an entry that is not valid: a page listed twice, a group without entries, an icon that is not a name |
 | [C642](errors.md#c642) | a `requires` that is not valid, or names an entity the spec does not have |
 
-**Named menus** (experimental). A project with a public side has more than
+**Named menus**. A project with a public side has more than
 one menu: the back office's sidebar, the site's header and a signed-in
 person's own links. A mapping of a menu's name to a list writes each one
 ([named menus](navigation.md#named-menus-experimental)):
@@ -561,11 +535,6 @@ route no page has, `KARNI_NAVIGATION = "db"`) is listed and stays in the
 settings.
 
 #### Related tabs and dashboard pages
-
-!!! warning "Experimental"
-    A detail page's `related` and a dashboard page other than `home` are
-    [experimental](stability.md#experimental-names), like the
-    [page blocks](ui.md#page-blocks-experimental) they compose.
 
 A detail page written as `{detail: {related: [...]}}` shows a tab per
 related entity, each a table of that entity's rows filtered to the record
@@ -621,7 +590,7 @@ seeder <Entity> --count <n>`, a Seeder's `Meta.count`). `0` skips it.
 `seed` builds an app with empty tables. Keep it for a demo, and leave it out
 when the app's database should hold only the rows its users create.
 
-A large count (experimental) is seeded in bulk: from the project's
+A large count is seeded in bulk: from the project's
 `KARNI_SEED_BULK_THRESHOLD` (default 1000) rows, `karni seed` writes the
 entity's rows in batches, relation targets first and foreign keys drawn from
 existing rows ([volume seeding](seeding.md#volume-seeding)). `karni plan`
@@ -785,10 +754,6 @@ gives one canonical form: defaults written out, `str:255` as `str`,
 spec describes.
 
 ## `karni plan`
-
-!!! warning "Experimental"
-    `karni plan`, its output, `--json` and its schema, `manage.py
-    karni_rows` and `karni.facts.count_rows` are experimental.
 
 `karni plan` compares `karni.yaml` with the project and prints what
 `karni build` would change. It writes nothing: no file, no row.
@@ -1064,11 +1029,6 @@ breaking change of the output.
 
 ## `karni build`
 
-!!! warning "Experimental"
-    `karni build`, its output, `--json` and its schema, the layout of the
-    files it writes, `.karni/build.json` and `manage.py
-    karni_makemigrations` are experimental.
-
 `karni build` makes the project match `karni.yaml`. It applies the plan
 `karni plan` prints, in one command, and a second run with no change in the
 spec writes nothing.
@@ -1227,8 +1187,8 @@ rows). Then the hash check, then the steps:
 2. **files**: the Karni-owned files and blocks, the project's files once
    (an app the spec adds gets its skeleton as `karni make app` writes it).
    After `karni new --recipe`, `.karni/build.json` names the recipe, and
-   this step also writes the recipe's own files over the stubs (experimental,
-   [the stub rule](recipes/index.md#the-stub-rule)).
+   this step also writes the recipe's own files over the stubs
+   ([the stub rule](recipes/index.md#the-stub-rule)).
 3. **migrations**: `manage.py karni_makemigrations`, which writes the
    renames (`was:`) as `RenameModel` and `RenameField` first, so the data
    stays even when the type changes too, then runs Django's
@@ -1242,7 +1202,7 @@ rows). Then the hash check, then the steps:
    would mix with the rows its users and its tests create. `karni seed`
    fills every table when you ask for demo data.
    A count at the bulk threshold is inserted in bulk, and the step says so
-   with its time (`Booking 200000 in bulk (61.2s)`, experimental).
+   with its time (`Booking 200000 in bulk (61.2s)`).
 6. **types**: `karni types`, when the project has a frontend.
 7. **test**: the project's own tests (`karni test`). The API changed on
    purpose, so the contract snapshot (`tests/openapi.snapshot.json`)
@@ -1371,10 +1331,10 @@ rule](recipes/index.md#the-stub-rule)).
 | `purpose` | yes | what the app does, in one line of at most 80 characters |
 | `use_when` | yes | plain phrases of what someone asks for when the recipe fits, e.g. `["online shop", "sell products", "checkout"]`. `--match` ranks by them |
 | `usually_changed` | no | what people usually change in the spec after starting from it, in plain words, e.g. `["the product fields", "the currency"]` |
-| `version` | no | the recipe's own version, e.g. `1.0.0`, recorded when a project adds it (experimental) |
-| `requires` | no | core contracts and modules it needs, each with an optional version range: `["people>=1", "events>=1", "storage"]` (experimental, [what each installs](family.md#recipetoml-requires-conflicts-and-version)) |
-| `conflicts` | no | recipes and modules it cannot share a project with (experimental) |
-| `routes` | no | experimental: the recipe's React pages, a `[[routes]]` table each (below) |
+| `version` | no | the recipe's own version, e.g. `1.0.0`, recorded when a project adds it |
+| `requires` | no | core contracts and modules it needs, each with an optional version range: `["people>=1", "events>=1", "storage"]` ([what each installs](family.md#recipetoml-requires-conflicts-and-version)) |
+| `conflicts` | no | recipes and modules it cannot share a project with |
+| `routes` | no | the recipe's React pages, a `[[routes]]` table each (below) |
 
 Each `[[routes]]` entry registers one page of the recipe's own files in
 `frontend/src/routes.tsx` on the first build, at the `// karni:page-imports`

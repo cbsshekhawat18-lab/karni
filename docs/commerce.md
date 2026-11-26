@@ -1,5 +1,5 @@
 ---
-description: "karni-commerce (experimental): one cart, checkout and order path for anything a project sells, through a sellable adapter per kind, with options per line, coupons, shipping zones and methods, tax rates, orders in money states for a person of karni.people, deposits with a balance link, holds that end, free orders, several payments per order, refunds by line or amount, invoices and packing slips, abandoned carts, family events on the timeline, sales reports with CSV, settings and emails a business edits, a conformance check for adapters, and @karni/commerce-ui."
+description: "karni-commerce: one cart, checkout and order path for anything a project sells, through a sellable adapter per kind, with options per line, coupons, shipping zones and methods, tax rates, orders in money states for a person of karni.people, deposits with a balance link, holds that end, free orders, several payments per order, refunds by line or amount, invoices and packing slips, abandoned carts, family events on the timeline, sales reports with CSV, settings and emails a business edits, a conformance check for adapters, and @karni/commerce-ui."
 ---
 
 # Commerce (karni-commerce)

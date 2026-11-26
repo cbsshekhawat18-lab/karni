@@ -129,7 +129,7 @@ cd packages/karni
 KARNI_TEST_PK=bigint ../../.venv/bin/python -m pytest
 ```
 
-The tooling must keep up with large projects (experimental). The benchmark
+The tooling must keep up with large projects. The benchmark
 `scripts/benchmark/large_project.py` makes a 100-model project the way a user
 does (`karni new` without `frontend/`, a `karni.yaml` of 100 entities over 10
 apps, `karni build`) and times `karni check` (cold, cached, after one edit,

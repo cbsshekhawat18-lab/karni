@@ -1,24 +1,8 @@
 ---
-description: "Karni's tooling for projects with 100 models or more (experimental): karni context one area at a time, a karni check that skips unchanged files, karni seed --volume for realistic row counts, configurable scaling budgets, karni queries --explain on PostgreSQL and a CI benchmark."
+description: "Karni's tooling for projects with 100 models or more: karni context one area at a time, a karni check that skips unchanged files, karni seed --volume for realistic row counts, configurable scaling budgets, karni queries --explain on PostgreSQL and a CI benchmark."
 ---
 
 # Large projects
-
-!!! warning "Experimental"
-    Everything on this page is [experimental](stability.md#experimental-names):
-    `karni context --summary`, `--app`, `--model` and `--max-tokens`,
-    `manage.py karni_context`'s flags of the same names, the check cache
-    (`karni check --changed` and `--no-cache`, `manage.py karni_check
-    --changed` and `--no-cache`, `.karni/local/check-cache.json`,
-    `karni.testing.checkcache`), `karni seed --volume` and `--batch-size`,
-    `karni.bulk_seeding`, the seed ledger (`.karni/local/seeded.json`),
-    `karni.performance.Scaling` and `query_scaling`, `karni queries
-    --explain`'s analysis (`karni.api.explain`), the settings
-    `KARNI_CHECK_CACHE`, `KARNI_SCALING_ROWS`, `KARNI_SEED_BULK_THRESHOLD`,
-    `KARNI_SEED_BATCH_SIZE`, `KARNI_SEED_LEDGER` and
-    `KARNI_EXPLAIN_SEQ_SCAN_ROWS`, and `scripts/benchmark/large_project.py`.
-    They may change in a minor release, with a CHANGELOG entry. The error
-    codes keep their meaning.
 
 A project with a hundred models or more strains the tools an agent runs again
 and again. The inventory no longer fits in one read, `karni check` reads
@@ -114,6 +98,11 @@ start and its system checks, which read the whole project.
 
 ## Volume seeding
 
+!!! warning "Experimental"
+    Volume seeding is [experimental](stability.md#experimental-names): `karni seed
+    --volume` and `--batch-size`, `karni.bulk_seeding`, the seed ledger and the
+    `KARNI_SEED_*` settings may change in a minor release, with a CHANGELOG entry.
+
 The demo seed (`karni seed`, see [seeding](seeding.md)) makes ten connected
 rows per table. A query that slows down at a hundred thousand rows needs a
 hundred thousand rows:
@@ -167,6 +156,12 @@ volume and how long it takes, and `karni build` seeds it in bulk.
 
 ## The scaling check
 
+!!! warning "Experimental"
+    The scaling settings are [experimental](stability.md#experimental-names):
+    `KARNI_SCALING_ROWS`, `karni.performance.Scaling`, `query_scaling` and the
+    time fields of `ScalingResult` may change in a minor release, with a
+    CHANGELOG entry.
+
 The scaling check in the architecture suite measures every routed
 viewset's `list` with 2 and with 12 rows, and `retrieve` with 2 and with 12
 related rows, and fails when the query count grows (see
@@ -200,6 +195,11 @@ number of seconds is `E477`. `karni context` lists every `query_scaling` on
 its `PERF` line.
 
 ## Query plans: `karni queries --explain`
+
+!!! warning "Experimental"
+    The analysis `--explain` runs on PostgreSQL, its findings (`seq_scans` in
+    `--json`), `karni.api.explain` and `KARNI_EXPLAIN_SEQ_SCAN_ROWS` are
+    [experimental](stability.md#experimental-names).
 
 `karni queries ENDPOINT --explain` (see [find an N+1](debugging/queries.md))
 adds the plan of every query. On PostgreSQL it runs `EXPLAIN (ANALYZE, FORMAT

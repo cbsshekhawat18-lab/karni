@@ -225,7 +225,7 @@ Every feature, grouped by what you need. The [features page](docs/features.md) l
 <tr>
 <td valign="top">
 
-**Build games** (experimental)
+**Build games**
 
 - [`karni new --kind game`](docs/apps-and-games.md): a game first, a small game you can play at `/play/<slug>/`, its server, the admin and a package per game portal. `--kind app+game` puts the game on a page of an app
 - [Game starters](docs/game-starters.md): `karni new "Sky Dash" --kind game --genre runner` writes a complete one-tap runner (a seeded track, a daily run with its own board, a shop of trails and hats, an ad continue) with its tests, and `karni starters list --match` finds the starter for a request

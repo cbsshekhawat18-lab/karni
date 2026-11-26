@@ -141,7 +141,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/.github/ci
         run: python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
 
-      # Integer keys (BigIntBaseModel, experimental): the core suite once more
+      # Integer keys (BigIntBaseModel): the core suite once more
       # with the test app's API models on integer keys (KARNI_TEST_PK=bigint),
       # on sqlite and on PostgreSQL. One Python is enough: the key type, not
       # the interpreter, is what changes.
@@ -267,7 +267,7 @@ jobs:
         run: make test-py CORE_ONLY=1
 
   # ---------------------------------------------------------------------------
-  # Tooling for large projects (experimental): a 100-model project made with
+  # Tooling for large projects: a 100-model project made with
   # karni new and karni build (scripts/benchmark/large_project.py), then
   # karni check (cold, cached, after one edit, --changed), karni context
   # (whole, --summary, --app) and the project's tests, timed. A time more

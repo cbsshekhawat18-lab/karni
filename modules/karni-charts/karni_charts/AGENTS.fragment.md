@@ -1,4 +1,4 @@
-## Saved charts (karni-charts, experimental)
+## Saved charts (karni-charts)
 - A chart people edit in the admin is a `Chart` row, never a page of code:
   a source resource, an x axis (a group), a y axis (metric and value), an
   optional z axis (stacked or series), default and allowed filters.

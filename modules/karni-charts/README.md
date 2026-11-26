@@ -6,10 +6,6 @@ Saved charts for Karni: charts defined and previewed in the admin, served throug
 
 A chart's data is never stored or computed by the module: it is the source resource's own [aggregate action](https://cbsshekhawat18-lab.github.io/karni/aggregations/), fetched as the person who views the chart, so a chart never shows a row the source's list would hide from them.
 
-**Experimental**, like the aggregations it builds on: the model, the API, the
-settings and `@karni/charts-ui` may change in a minor release, with a
-CHANGELOG entry. The error codes keep their meaning.
-
 ## Install
 
 ```bash

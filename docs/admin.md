@@ -172,7 +172,7 @@ excluded from forms.
 | `readonly_fields` | audit fields present on the model + `AdminMeta.read_only` (shown in the collapsed Details section) | none |
 | `list_select_related` | FKs appearing in the derived `list_display` (no N+1 changelists) | none |
 | `autocomplete_fields` | FK/M2M whose target admin has search fields (second pass) | none |
-| `fieldsets` (experimental) | `Karni.field_groups`: a fieldset per group, the form's fields in no group last under Other ([field groups](ui.md#field-groups-and-column-sets-experimental)). `derive_fieldsets` is the hook | none |
+| `fieldsets` | `Karni.field_groups`: a fieldset per group, the form's fields in no group last under Other ([field groups](ui.md#field-groups-and-column-sets)). `derive_fieldsets` is the hook | none |
 
 Each rule is a pure function in `karni.admin.derive` and a classmethod hook
 on `KarniModelAdmin`. Override either one per project.
@@ -383,10 +383,6 @@ writable, or any admin read-only. A model on a second database
 
 ## Tree models
 
-!!! warning "Experimental"
-    The tree changelist (`karni.admin.tree`, `tree_changelist_max_rows`) is
-    [experimental](stability.md#experimental-names).
-
 A [tree model](models.md#tree-models)'s changelist lists the rows in tree
 order, a parent and then its branch, with the name indented by depth
 (the `tree_label` column, first in the derived columns). Filters and search
@@ -396,7 +392,7 @@ sorted by a column is flat, and so is one with more than
 tree order off.
 
 The menu of [navigation from data](navigation.md) (`KARNI_NAVIGATION =
-"db"`, experimental) is such a tree: *Navigation items* lists the entries in
+"db"`) is such a tree: *Navigation items* lists the entries in
 tree order, and its *Menu preview* button shows the menu one user gets.
 
 ## Soft-deleted models in the admin

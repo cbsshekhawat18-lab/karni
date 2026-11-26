@@ -205,10 +205,10 @@ with how long it takes.
 | A seeder that reads another model's rows with no foreign key to it | `class Meta: after = ("shop.Product",)`: those models are seeded first when the run seeds them too |
 | Different values for one field | A class attribute on the seeder |
 | A fixed list of names that never runs out | `karni.seeding.cycled(names, index)`: the names in order, then `Name 2`, `Name 3`. `suffix=` changes the tag |
-| A picture for an image field | `karni.seeding.placeholder_image(label, key=...)` (experimental): a PNG drawn from the label's initials in the colours of `key`, the same picture for the same label and key, so a catalogue looks alive with no files to ship. `size=` and `name=` change it |
+| A picture for an image field | `karni.seeding.placeholder_image(label, key=...)`: a PNG drawn from the label's initials in the colours of `key`, the same picture for the same label and key, so a catalogue looks alive with no files to ship. `size=` and `name=` change it |
 | No email while the demo is made | `with karni.mail.silenced():` around what the seeder does: listeners that send at the commit send nothing either |
 | Different inference everywhere | Subclass `karni.testing.values.ValueInference`, change its `rules`, and pass it to the builder |
 | Seed from your own code | `karni.seeding.seed(count=..., seed=..., models=...)`. It does not refuse: check `karni.seeding.occupied(seed_plan())` yourself |
-| Volume rows of your own | Subclass `karni.bulk_seeding.BulkSeeder` (`rows`, `insert`, `pick_key`, ...) and pass `bulk=` to `karni.seeding.seed(volume=...)` (experimental) |
-| Bulk from another count, or other batches | `KARNI_SEED_BULK_THRESHOLD`, `KARNI_SEED_BATCH_SIZE` (experimental) |
+| Volume rows of your own | Subclass `karni.bulk_seeding.BulkSeeder` (`rows`, `insert`, `pick_key`, ...) and pass `bulk=` to `karni.seeding.seed(volume=...)` |
+| Bulk from another count, or other batches | `KARNI_SEED_BULK_THRESHOLD`, `KARNI_SEED_BATCH_SIZE` |
 | Real content, not demo data | A content file and [`karni load`](content-loading.md) |

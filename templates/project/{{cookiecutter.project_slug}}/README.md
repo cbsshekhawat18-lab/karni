@@ -19,7 +19,7 @@ requests a public form collects.
 {%- endif %}
 {%- elif cookiecutter.kind == "game" -%}
 {%- set game = cookiecutter.project_slug.replace("_", "-") -%}
-A game (`kind = "game"` in pyproject.toml), experimental: the game is the front
+A game (`kind = "game"` in pyproject.toml): the game is the front
 door. Its client is `game/{{ game }}/`, its own npm package on
 [@karni/game](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-game/ui),
 served at `/play/{{ game }}/`. Its server side is the
@@ -31,7 +31,7 @@ boards and wallets in the admin.
 {%- else %} There is no React staff app: staff work in the admin.
 {%- endif %}
 {%- elif cookiecutter.kind == "app+game" -%}
-An app with a game in it (`kind = "app+game"` in pyproject.toml), experimental:
+An app with a game in it (`kind = "app+game"` in pyproject.toml):
 a REST API and the React app in `frontend/` for signed-in users, whose page
 `/game` hosts the game (`frontend/src/game/`, on
 [@karni/game](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-game/ui)).

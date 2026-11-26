@@ -564,8 +564,7 @@ A browser app is replaced on the next page load. A mobile app is not: the
 build a user installed last year still calls your API. A version prefix lets
 the API change for new builds while old ones keep a URL that does not move.
 It is off until you set it, and an unversioned project is unchanged.
-Experimental, see [API versions](api.md#api-versions) for the whole
-reference.
+See [API versions](api.md#api-versions) for the whole reference.
 
 ```sh
 KARNI_API_VERSION=v1                      # /api/v1/products/

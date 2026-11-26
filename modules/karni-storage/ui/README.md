@@ -1,10 +1,12 @@
 # @karni/storage-ui
 
+> **Experimental.** Its names may change in a minor release, with a CHANGELOG entry ([stability](https://cbsshekhawat18-lab.github.io/karni/stability/#experimental-names)).
+
 React components for the Karni storage module: protected uploads straight to the bucket, download links and images.
 
 [![npm](https://img.shields.io/npm/v/@karni/storage-ui)](https://www.npmjs.com/package/@karni/storage-ui) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/storage/)
 
-It composes [`@karni/ui`](https://www.npmjs.com/package/@karni/ui) for the [karni-storage](https://pypi.org/project/karni-storage/) module (`karni add storage`). **Experimental**: its names may change in a minor release, with a CHANGELOG entry.
+It composes [`@karni/ui`](https://www.npmjs.com/package/@karni/ui) for the [karni-storage](https://pypi.org/project/karni-storage/) module (`karni add storage`).
 
 - **`ProtectedFileInput`**: a protected file field of `<ResourceForm>`. The file goes
   straight to the bucket when the user picks it, with a progress bar, and the form

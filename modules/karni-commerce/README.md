@@ -1,6 +1,8 @@
 # karni-commerce
 
-One cart, checkout and order path for anything a Karni project sells. Experimental.
+> **Experimental.** Its names may change in a minor release, with a CHANGELOG entry ([stability](https://cbsshekhawat18-lab.github.io/karni/stability/#experimental-names)).
+
+One cart, checkout and order path for anything a Karni project sells.
 
 [![PyPI](https://img.shields.io/pypi/v/karni-commerce)](https://pypi.org/project/karni-commerce/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/commerce/)
 

@@ -4,7 +4,7 @@ Reports for Karni: a row printed to PDF from an HTML template in the background,
 
 [![PyPI](https://img.shields.io/pypi/v/karni-reports)](https://pypi.org/project/karni-reports/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/reports/)
 
-Experimental. A Celery task renders the template with WeasyPrint and stores the file through Django's storage. The file is cached by the template and the data, so a changed row or template gives a new file and an unchanged one is served again without rendering. The API serves it only to users who may retrieve the row through its own viewset.
+A Celery task renders the template with WeasyPrint and stores the file through Django's storage. The file is cached by the template and the data, so a changed row or template gives a new file and an unchanged one is served again without rendering. The API serves it only to users who may retrieve the row through its own viewset.
 
 ## Install
 

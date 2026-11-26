@@ -1,13 +1,8 @@
 ---
-description: "karni-storage (experimental): files a row owns, kept in a private S3-compatible bucket or on disk and downloaded only through the row's own viewset, with provider presets for AWS, R2, MinIO, Spaces, B2 and GCS, direct uploads with a confirm step, thumbnails and @karni/storage-ui."
+description: "karni-storage: files a row owns, kept in a private S3-compatible bucket or on disk and downloaded only through the row's own viewset, with provider presets for AWS, R2, MinIO, Spaces, B2 and GCS, direct uploads with a confirm step, thumbnails and @karni/storage-ui."
 ---
 
 # Protected files (karni-storage)
-
-!!! warning "Experimental"
-    The karni-storage module and `@karni/storage-ui` are
-    [experimental](stability.md#experimental-names): their names may change in
-    a minor release, with a CHANGELOG entry.
 
 Some files belong to a row and must stay with it: a contract's scan, a
 patient's form, a product's supplier price list. Anyone who can read the row
@@ -258,6 +253,10 @@ same access check. Until the task has run the answer is a 404 (`STORE017`).
 size is added. `thumbnails=False` on a field turns them off.
 
 ## The React side
+
+!!! warning "Experimental"
+    `@karni/storage-ui` is [experimental](stability.md#experimental-names): a name may
+    change in a minor release, with a CHANGELOG entry.
 
 `@karni/storage-ui` is a package of its own, so `@karni/ui` stays free of
 any S3 knowledge. It composes `@karni/ui`'s `FileUpload` and plugs into

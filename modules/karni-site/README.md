@@ -380,7 +380,7 @@ leaves a model out.
 
 A view behind a capture with a known set of addresses and no model
 (`/topics/<slug:slug>/` for a few topics) declares them, and they join the
-`pages` section and the page test (experimental):
+`pages` section and the page test:
 
 ```python
 from karni_site.sitemaps import pages
