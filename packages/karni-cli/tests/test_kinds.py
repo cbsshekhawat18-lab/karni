@@ -19,6 +19,7 @@ import shutil
 import subprocess
 import tomllib
 from pathlib import Path
+from typing import Any
 
 import pytest
 from typer.testing import CliRunner
@@ -55,6 +56,13 @@ def _made(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str, *args: str
 def _agents(project: Path) -> str:
     """AGENTS.md with its lines joined: the kind's paragraph wraps at 88 columns."""
     return " ".join((project / "AGENTS.md").read_text().split())
+
+
+def _names(pyproject: dict[str, Any]) -> list[str]:
+    """The distributions in ``[project].dependencies``, without extras or ranges."""
+    from packaging.requirements import Requirement
+
+    return [Requirement(dep).name for dep in pyproject["project"]["dependencies"]]
 
 
 def _kind(project: Path) -> str:
@@ -182,7 +190,7 @@ def test_an_app_with_a_game(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     assert _kind(project) == "app+game"
     assert not (project / "game").exists()
     pyproject = tomllib.loads((project / "pyproject.toml").read_text())
-    assert "karni-game" in pyproject["project"]["dependencies"]
+    assert "karni-game" in _names(pyproject)
     settings = (project / "config" / "settings.py").read_text()
     assert '"karni_game"' in settings and '"games"' in settings
     assert settings.index("KARNI_PEOPLE = True") < settings.index("karni_settings(globals())")
@@ -254,13 +262,7 @@ def test_a_game_first(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert _kind(project) == "game"
     # The server side is the same as the hybrid's.
     pyproject = tomllib.loads((project / "pyproject.toml").read_text())
-    assert pyproject["project"]["dependencies"] == [
-        "karni",
-        "gunicorn",
-        "uvicorn-worker",
-        "psycopg[binary]",
-        "karni-game",
-    ]
+    assert _names(pyproject) == ["karni", "gunicorn", "uvicorn-worker", "psycopg", "karni-game"]
     settings = (project / "config" / "settings.py").read_text()
     assert '"karni_game"' in settings and '"games"' in settings
     assert settings.index("KARNI_PEOPLE = True") < settings.index("karni_settings(globals())")
@@ -395,8 +397,8 @@ def test_a_project_with_both_shares_one_base(
     assert urls.count('include("karni.accounts.urls")') == 1
     assert urls.count('include("karni_game.urls")') == 1 and urls.count("*api_urls()") == 1
     pyproject = tomllib.loads((project / "pyproject.toml").read_text())
-    assert pyproject["project"]["dependencies"].count("karni") == 1
-    assert pyproject["project"]["dependencies"].count("karni-game") == 1
+    assert _names(pyproject).count("karni") == 1
+    assert _names(pyproject).count("karni-game") == 1
     compose = (project / "docker-compose.yml").read_text()
     assert compose.count("\n  db:\n") == 1 and compose.count("image: postgres:16") == 1
     caddy = (project / "Caddyfile").read_text()

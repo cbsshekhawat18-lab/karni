@@ -308,7 +308,13 @@ nothing is written: wiring an app Python cannot import would stop every
 Django command. Install a third-party module first, then add it.
 
 1. Adds the distribution (`karni-<x>`) to `[project].dependencies` in the
-   project's `pyproject.toml` (idempotent, parsed, never string-matched).
+   project's `pyproject.toml` (idempotent, parsed, never string-matched), at the
+   range the project holds karni at (`karni-<x>>=0.7,<0.8`) and says so. A
+   project that lists karni without a range gets the line of its
+   `[tool.karni] baseline`. When the newest release is on a later line than
+   the project's, it says so and names `karni upgrade`, which moves karni and
+   the modules together. It never upgrades karni itself. See
+   [holding a project on a version line](stability.md#holding-a-project-on-a-version-line).
 2. Inserts each of `wiring.apps` into the `# karni:apps` marker block in
    `config/settings.py` (idempotent).
 3. Inserts each of `wiring.middleware` into the `# karni:middleware` block

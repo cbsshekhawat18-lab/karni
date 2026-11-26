@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -428,9 +429,20 @@ def _dependencies(project: Path) -> list[str]:
     return tomllib.loads((project / "pyproject.toml").read_text())["project"]["dependencies"]
 
 
+def _own_range() -> str:
+    """The range ``karni new`` writes for karni: this karni-cli's own line."""
+    from karni_cli import pins
+
+    line = pins.cli_line()
+    assert line is not None
+    return line.range()
+
+
 def _set_karni(project: Path, requirement: str) -> str:
     path = project / "pyproject.toml"
-    path.write_text(path.read_text().replace('    "karni",\n', f'    "{requirement}",\n', 1))
+    path.write_text(
+        re.sub(r'    "karni[^"]*",\n', f'    "{requirement}",\n', path.read_text(), count=1)
+    )
     return path.read_text()
 
 
@@ -439,13 +451,14 @@ def test_an_image_field_adds_the_images_extra_to_pyproject(
 ) -> None:
     ok("make", "app", "events")
     before = (project / "pyproject.toml").read_text()
-    assert _dependencies(project)[0] == "karni"
+    held = _own_range()
+    assert _dependencies(project)[0] == f"karni{held}"
     result = ok("make", "model", "Event", "title:str", "photo:image?", "logo:image?")
     after = (project / "pyproject.toml").read_text()
-    assert after == before.replace('    "karni",\n', '    "karni[images]",\n', 1)
+    assert after == before.replace(f'    "karni{held}",\n', f'    "karni[images]{held}",\n', 1)
     assert "modified pyproject.toml" in result.output
     assert (
-        'note: pyproject.toml: "karni" -> "karni[images]", because Event.photo, Event.logo '
+        f'note: pyproject.toml: "karni{held}" -> "karni[images]{held}", because Event.photo, Event.logo '
         "are ImageFields and the images extra installs Pillow" in result.output
     )
     assert "pip install -e ." in result.output
@@ -508,7 +521,9 @@ def test_dry_run_shows_the_pyproject_edit_and_writes_nothing(
     result = ok("make", "model", "Event", "photo:image", "--dry-run")
     assert (project / "pyproject.toml").read_text() == before
     assert "would modify pyproject.toml" in result.output
-    assert '-    "karni",' in result.output and '+    "karni[images]",' in result.output
+    held = _own_range()
+    assert f'-    "karni{held}",' in result.output
+    assert f'+    "karni[images]{held}",' in result.output
     assert "(dry run: nothing written)" in result.output
 
 
@@ -885,7 +900,7 @@ def test_site_creates_the_app_and_replaces_the_welcome_route(project: Path) -> N
         "]  # karni:context_processors\n"
     )
     # The site's runtime is the karni-site module, wired as `karni add site` does.
-    assert '"karni-site[images]"' in (project / "pyproject.toml").read_text()
+    assert '"karni-site[images]>=' in (project / "pyproject.toml").read_text()
     assert "karni-site: added to pyproject.toml and INSTALLED_APPS" in result.output
     assert "Run `karni add site` again after installing" in result.output
     views = (site / "views.py").read_text()

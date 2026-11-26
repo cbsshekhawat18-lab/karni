@@ -12,8 +12,9 @@
 4. Report what was applied, what needs a person (with each migration note)
    and what was skipped.
 
-Run it before raising the karni pin. The CLI carries the changelog, so the
-project's old karni is fine.
+The CLI carries the changelog, so the project's old karni is fine. It also writes
+the range of the release it moves to for karni and every module in pyproject.toml
+(a project that listed them bare is pinned by it).
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from typing import TYPE_CHECKING
 
 import typer
 
+from karni_cli import pins
 from karni_cli import project as project_mod
 from karni_cli.project import CliError, require_project, venv_python
 from karni_cli.upgrades import changelog, engine
@@ -69,6 +71,37 @@ def _baseline(project: Path) -> str | None:
         return None
     value = data.get("tool", {}).get("karni", {}).get("baseline")
     return str(value) if value else None
+
+
+def _pin_plan(project: Path, target: str) -> tuple[str, list[tuple[str, str]]] | None:
+    """pyproject.toml with karni and its modules held at ``target``'s line, and what changes.
+
+    ``None`` when the project has no pyproject.toml, ``target`` is not a release
+    number, or every requirement already holds the range.
+    """
+    line = pins.compatible_range(target)
+    pyproject = project / "pyproject.toml"
+    if line is None or not pyproject.is_file():
+        return None
+    text, changed = pins.with_ranges(pyproject.read_text(encoding="utf-8"), line)
+    return (text, changed) if changed else None
+
+
+def _write_pins(project: Path, plan: tuple[str, list[tuple[str, str]]], *, dry_run: bool) -> None:
+    text, changed = plan
+    typer.echo(
+        "pyproject.toml" + (" would hold" if dry_run else " now holds") + " karni and the "
+        "modules at one range:"
+    )
+    for before, after in changed:
+        typer.echo(f"  {before} -> {after}")
+    if dry_run:
+        return
+    (project / "pyproject.toml").write_text(text, encoding="utf-8")
+    typer.echo(
+        "Reinstall so the new range is installed (uv pip install -r pyproject.toml, or "
+        "docker compose build)."
+    )
 
 
 def _git_status(project: Path) -> list[str] | None:
@@ -207,8 +240,15 @@ def upgrade(
             err=True,
         )
     selected = changelog.select(changes, current, target)
+    pinned = _pin_plan(project, target)
     if not selected:
-        typer.echo(f"karni {current} -> {target}: no recorded breaking changes. Nothing to do.")
+        if pinned is None:
+            typer.echo(f"karni {current} -> {target}: no recorded breaking changes. Nothing to do.")
+            return
+        typer.echo(f"karni {current} -> {target}: no recorded breaking changes.")
+        if not dry_run:
+            _check_tree(project, allow_dirty)
+        _write_pins(project, pinned, dry_run=dry_run)
         return
     if not dry_run:
         _check_tree(project, allow_dirty)
@@ -229,3 +269,5 @@ def upgrade(
     if dry_run and report.changes:
         typer.echo(report.diff, nl=False)
     typer.echo(engine.render(report))
+    if pinned is not None:
+        _write_pins(project, pinned, dry_run=dry_run)

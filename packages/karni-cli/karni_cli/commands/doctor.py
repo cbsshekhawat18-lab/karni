@@ -29,7 +29,7 @@ from urllib.parse import urlsplit
 
 import typer
 
-from karni_cli import agent_data, envfile, services, tips, toolchain
+from karni_cli import agent_data, envfile, pins, services, tips, toolchain
 from karni_cli import history as history_mod
 from karni_cli import project as project_mod
 from karni_cli import suggest as suggest_mod
@@ -286,6 +286,7 @@ def doctor(
     else:
         typer.echo(_line("node", NO_FRONTEND))
         typer.echo(_line("ui", NO_FRONTEND))
+    _echo_lines("versions", pins.doctor_lines(project))
     _echo_lines("adapters", _adapters(project))
     _echo_lines("history", _history(project))
     for line in _suggestions(project, service):

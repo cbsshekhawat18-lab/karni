@@ -22,6 +22,22 @@ React package (when it has one) at the same version
 | Minor (`0.3.0`) | New features and deprecations. Before 1.0, also breaking changes, always under the rules below. |
 | Major (`1.0.0`, `2.0.0`) | Removal of anything deprecated in an earlier minor. |
 
+### Holding a project on a version line
+
+A patch release only fixes bugs, so a project can take every patch of its
+line and nothing more. Karni's own packages already do this between each
+other (a module asks for `karni>=0.7,<0.8`), and a project does the same:
+`karni new` writes `karni>=0.7,<0.8` (the line of the karni-cli that made
+it), and `karni add <module>` writes the module at the range the project
+holds karni at, so adding a module never moves karni. From 1.0 on a line is a
+major (`>=1.2,<2`). Moving to the next line is `karni upgrade`, which writes
+the new range for karni and every module together. A project that lists them
+without a range keeps working: `karni doctor` says how to pin them, and
+`karni upgrade` writes the range. `karni.W521` (a system check, so
+`karni check` shows it) names every installed package of the family that is
+not on karni's line. A checkout installed in editable mode, and a version
+with a `.dev` or `+local` part, are not compared.
+
 ## The promise
 
 For everything listed as public below, except the names marked

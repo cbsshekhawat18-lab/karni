@@ -216,7 +216,7 @@ def render(report: Report) -> str:
     else:
         lines.append(f"{files} file(s) changed.")
         lines.append(
-            f"Next: review `git diff`, pin karni to {report.target} and reinstall, make the "
+            "Next: review `git diff`, reinstall (pyproject.toml holds karni at the new range), make the "
             "changes listed above, run your formatter (rewrites keep your style but do not "
             "re-wrap long lines), then `karni check` and your tests with "
             "-W error::karni.deprecation.KarniDeprecationWarning."

@@ -340,7 +340,7 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     assert "agent-guidance-files: nothing to change" in out
     assert "django-5-2: Django" in manual
     assert "urls-marker: nothing to change" in out  # this project has no config/urls.py
-    assert "Next: review `git diff`, pin karni to 0.7.0" in out
+    assert "Next: review `git diff`, reinstall" in out
     assert "frontend-npm-floor: nothing to change" in out  # no frontend/package.json
     assert "public-read-writes-need-a-role: karni make --access public-read" in manual
     assert "migrations/0.5/#public-read-viewsets-review-who-may-write" in manual

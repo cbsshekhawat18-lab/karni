@@ -219,6 +219,14 @@ def prepare_ui_source(source: Path) -> None:
         )
 
 
+def _karni_range() -> str:
+    """The range ``karni`` is held at in a new project: this karni-cli's own line, else none."""
+    from karni_cli import pins
+
+    line = pins.cli_line()
+    return line.range() if line is not None else ""
+
+
 def _baseline_release() -> str:
     """The newest release this karni-cli's changelog knows: what the scaffold is written for."""
     from karni_cli.upgrades import changelog
@@ -881,6 +889,7 @@ def new(
             "karni_ui": (ui_spec := scaffold.ui_spec(ui_source, project)),
             "karni_ui_mount": scaffold.ui_mount_target(ui_spec),
             "karni_baseline": _baseline_release(),
+            "karni_range": _karni_range(),
             "kind": chosen,
             "staff_app": "yes" if with_staff_app else "no",
         },

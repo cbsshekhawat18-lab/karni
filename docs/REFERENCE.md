@@ -2836,6 +2836,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`W520`](errors.md#w520) | warning | Production email is not set up |
 | [`E520`](errors.md#e520) | exception | The deploy checks failed when the container started |
 | [`E521`](errors.md#e521) | exception | A backup failed |
+| [`W521`](errors.md#w521) | warning | karni, karni-cli and the modules are not on one version line |
 | [`W530`](errors.md#w530) | warning | Anyone may read a resource whose ids can be guessed |
 | [`E530`](errors.md#e530) | exception | KARNI_NAVIGATION is not valid |
 | [`E531`](errors.md#e531) | exception | KARNI_NAVIGATION = 'db' without the karni.navigation app |

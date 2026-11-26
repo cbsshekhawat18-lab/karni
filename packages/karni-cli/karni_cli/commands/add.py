@@ -31,8 +31,9 @@ import tomlkit
 import typer
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
+from packaging.version import Version
 
-from karni_cli import agent_data, scaffold
+from karni_cli import agent_data, pins, scaffold
 from karni_cli.adapters import MODULES_DIR, sync
 from karni_cli.project import (
     CliError,
@@ -56,7 +57,9 @@ def add_dependency_text(text: str, distribution: str) -> str | None:
 
     ``distribution`` may name extras (``karni-site[images]``). A requirement
     for the same distribution already listed, with or without them, is left
-    as it is.
+    as it is. A Karni module without a version is written at the range the
+    project holds karni at (:func:`karni_cli.pins.project_line`), so adding it
+    never moves karni.
 
     Parsed with tomlkit, never string-matched. ``karni make site`` uses it
     through the generators' workspace, ``karni add`` on the file.
@@ -77,8 +80,19 @@ def add_dependency_text(text: str, distribution: str) -> str | None:
                 return None
         except InvalidRequirement:
             continue
-    deps.append(distribution)
+    deps.append(_pinned(distribution, text))
     return tomlkit.dumps(doc)
+
+
+def _pinned(distribution: str, pyproject: str) -> str:
+    """``distribution`` at the project's Karni range, when it is a Karni module with none."""
+    requirement = Requirement(distribution)
+    if str(requirement.specifier) or canonicalize_name(requirement.name) not in pins.first_party():
+        return distribution
+    held = pins.project_line(pyproject)
+    if held is None:
+        return distribution
+    return pins.requirement_text(requirement, held[0])
 
 
 FRONTEND_PACKAGE = "frontend/package.json"
@@ -367,6 +381,7 @@ def plan_module(
             app_added = app_added or index == 0
     lines = [
         f"{distribution}: {'added to' if with_dependency else 'already in'} pyproject.toml",
+        *_range_lines(pyproject, requirement, written=with_dependency is not None),
         f"{app_name}: {'wired into' if app_added else 'already in'} INSTALLED_APPS",
     ]
     settings, notes = _wire(settings, manifest)
@@ -383,6 +398,24 @@ def plan_module(
             ws.write("pyproject.toml", adopted[0])
             lines.append(kinds.adoption_note(adopted[1], adopted[2]))
         lines += _site_urls(ws)
+    return lines
+
+
+def _range_lines(pyproject: str, requirement: str, *, written: bool) -> list[str]:
+    """What ``karni add`` says about the range it wrote the module at, and when to upgrade."""
+    held = pins.project_line(pyproject)
+    if not written or held is None:
+        return []
+    spec, source = held
+    lines = [f"  written as {_pinned(requirement, pyproject)}, {source}"]
+    newest = pins.cli_line()
+    if newest is not None and Version(f"{newest.text}.0") not in spec:
+        lines.append(
+            f"  The newest release is {newest.text}. This project holds karni at "
+            f"{pins.spec_text(spec)}, so this "
+            f"module stays on the same line and the {newest.text} release is not used. To use it, "
+            "run `karni upgrade`: it moves karni and every module to the same release together."
+        )
     return lines
 
 

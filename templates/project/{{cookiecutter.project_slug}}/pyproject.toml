@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "{{ cookiecutter.project_name }}, a Karni project."
 requires-python = ">=3.12"
 dependencies = [
-    "karni",
+    # Held at the Karni line the project was created with (karni new writes the range).
+    # Moving to a newer line is `karni upgrade`, which writes the new range.
+    "karni{{ cookiecutter.karni_range }}",
     "gunicorn",
     "uvicorn-worker",
     "psycopg[binary]",

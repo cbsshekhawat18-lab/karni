@@ -1214,6 +1214,10 @@ def _stand_in_user(user_model: Any) -> Any:
 # and the typed field layer, E960-E970 / W964-W967 (karni.fields.checks).
 from karni import guard_checks as _guard_checks  # noqa: E402,F401
 
+
+# One version line for karni, karni-cli and the modules, W521 (karni.versions).
+from karni import versions as _versions  # noqa: E402,F401
+
 # External tables, SQL views and a second database, E270-E276 / W541 / W542 (karni.db.checks).
 from karni.db import checks as _db_checks  # noqa: E402,F401
 from karni.fields import checks as _field_checks  # noqa: E402,F401

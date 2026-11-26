@@ -57,6 +57,23 @@ apply codemods and list the manual steps. This file is the human summary.
   gets the step without a link, and a project with no model of its own keeps the old
   choice.
 
+- **Changed (experimental): a new project holds karni and its modules at one version line,
+  and a check says when they drift.** `karni new` wrote `karni`, `karni-site` and every
+  module bare, so installing an extra for `karni-ai` in a 0.5 project moved karni to 0.6,
+  and a server installing from the same `pyproject.toml` got whatever was newest that day.
+  The template now writes `karni>=0.7,<0.8` (the line of the karni-cli that made the
+  project, as the packages' own ranges do, taken from the CLI's version when the project is
+  made and never written in the template). `karni add <module>` writes the module at the
+  range the project holds karni at, says so, and when the newest release is on a later line
+  says to run `karni upgrade` (it never upgrades karni itself). A project that lists them
+  bare keeps working: `karni add` uses the line of its `[tool.karni] baseline`, `karni
+  doctor` has a `versions` line that says how to pin, and `karni upgrade` writes the range
+  of the release it moves to for karni and every module (also when it has no code change to
+  make). New check `karni.W521`: karni, karni-cli (when installed) and every first-party
+  module must be on one line, each one off it is named. A checkout installed in editable
+  mode, or a `.dev` or `+local` version, is not compared. Silence it with
+  `SILENCED_SYSTEM_CHECKS`. See [stability](docs/stability.md#holding-a-project-on-a-version-line).
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web

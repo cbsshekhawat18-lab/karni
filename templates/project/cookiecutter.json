@@ -5,6 +5,7 @@
     "karni_ui": "^0.7.0",
     "karni_ui_mount": "",
     "karni_baseline": "0.0.0",
+    "karni_range": "",
     "kind": "app",
     "staff_app": "yes"
 }

@@ -2069,6 +2069,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Read the line after E521: it names the step (pg_dump, pg_restore, psql, the media archive, S3) and its error. Check DATABASE_URL, that the client tools match the database's major version (the backup image's POSTGRES_VERSION), the free space in KARNI_BACKUP_DIR and, with KARNI_BACKUP_S3_BUCKET, the AWS_* credentials. Then run `docker compose -f docker-compose.prod.yml exec backup karni-backup run`.
 
+<a id="w521"></a>
+
+#### W521: karni, karni-cli and the modules are not on one version line
+
+*system check (warning)* · from `karni.versions.check_version_line`
+
+**Why Karni objects.** Karni's packages are released together, and a module's range on karni is its own minor. An install that left karni on 0.7 and a module on 0.6 (a bare name in pyproject.toml takes whatever is newest that day) runs code written for another release. The message names each package that is off karni's line. A checkout installed in editable mode, and a version with a .dev or +local part, are not compared.
+
+**Fix.** Install each package named at the range the message gives, and pin karni and the modules with that range in pyproject.toml so an install cannot drift (karni new writes it, karni upgrade writes it for a project that lists them bare). To move to a newer line, run karni upgrade. Add 'karni.W521' to SILENCED_SYSTEM_CHECKS where the mix is deliberate.
+
 <a id="w530"></a>
 
 #### W530: Anyone may read a resource whose ids can be guessed
