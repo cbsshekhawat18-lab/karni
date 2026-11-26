@@ -2270,6 +2270,7 @@ class Lead(BaseModel):
 | `KARNI_SITE_MENU_FOLLOW_SEED` |  | `True` | True: a menu seeded from a template ({% get_menu ... seed="..." %}) follows it, as an editable block follows its text: the items nobody changed take the seed's new links. False: the seed makes the menu once and never changes it afterwards. |
 | `KARNI_SITE_REDIRECTS_BEFORE_VIEWS` |  | `False` | False: an admin redirect answers only where the site has no page (a 404), and a request for a page that exists costs nothing. True: every request is looked up before the view runs, one cache read each. |
 | `KARNI_SITE_EDITOR_ROLE` |  | `"editor"` | The slug of the content editor role this module declares (karni.roles), or None to declare none. A role of the same slug in KARNI_ROLES replaces it. |
+| `KARNI_SITE_EDITOR_GRANTS` |  | `{}` | Grants added to the editor role, merged over its own (karni_site.roles.editor_grants()): {"website.article:*": "all"}. Plain data: "app_label.model:action" ("*" for either part) -&gt; a scope ("all", "own", "related:&lt;key&gt;", "custom:&lt;name&gt;", "tree:&lt;path&gt;"), as in KARNI_ROLES. An entry the role cannot grant is left out and karni check names it (SITE026). A role of the same slug in KARNI_ROLES still replaces the whole role. |
 | `KARNI_SITE_FORMS` |  | `{}` | Form name -&gt; the dotted path of the BaseViewSet that saves it, or a model label ("shop.Enquiry"). Without an entry, {% karni_form "enquiry" %} finds the model by name. |
 | `KARNI_SITE_FORM_CLASS` |  | `"karni_site.forms.SiteForm"` | The class that renders and submits a form. A dotted path to a karni_site.forms.SiteForm subclass, to change how fields are described or how a submission is saved. |
 | `KARNI_SITE_FORM_TEMPLATE` |  | `"karni_site/forms/form.html"` | The template {% karni_form %} renders. Each field renders karni_site/forms/field.html, or karni_site/forms/&lt;form&gt;/&lt;field&gt;.html or karni_site/forms/&lt;form&gt;/field.html when one exists. |
@@ -3091,6 +3092,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`SITE023`](errors.md#site023) | exception | A notification does not say who to email |
 | [`SITE024`](errors.md#site024) | exception | A page fails while karni_site_seed renders it |
 | [`SITE025`](errors.md#site025) | warning | Blocks no template shows any more |
+| [`SITE026`](errors.md#site026) | check | KARNI_SITE_EDITOR_GRANTS adds a grant the editor role cannot give |
 | [`STORE001`](errors.md#store001) | check | KARNI_STORAGE_PROVIDER names no preset |
 | [`STORE002`](errors.md#store002) | check | The storage provider has no credentials |
 | [`STORE003`](errors.md#store003) | check | The storage preset needs a value it does not have |

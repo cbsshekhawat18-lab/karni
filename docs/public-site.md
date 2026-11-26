@@ -425,7 +425,8 @@ description, which are the page's [SEO entry](#seo-by-default).
 The client needs the admin and a role. The module declares `editor`:
 staff status and the role let a person change the site's content, menus,
 details and page titles, and nothing else (no enquiries, users, settings
-or redirects). The [module's README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
+or redirects). `KARNI_SITE_EDITOR_GRANTS = {"website.article:*": "all"}` in
+settings.py adds the project's own content to the role. The [module's README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
 has the settings and every escape hatch.
 
 ## The karni-site module

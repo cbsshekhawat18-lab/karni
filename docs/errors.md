@@ -4569,6 +4569,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** List them with `python manage.py karni_site_orphans` and remove them with --delete (--include-edited for the ones someone edited). A key that code of your own stores through karni_site.blocks.text() or image() goes in KARNI_SITE_CODE_BLOCKS.
 
+<a id="site026"></a>
+
+### SITE026: KARNI_SITE_EDITOR_GRANTS adds a grant the editor role cannot give
+
+*system check (error)* · from `karni_site.roles.check_grants`
+
+**Why Karni objects.** KARNI_SITE_EDITOR_GRANTS adds grants to the editor role karni-site declares. An entry whose model or action the project does not have (a typo, a model renamed or removed), or whose scope the model cannot carry ('own' without an owner field), is left out of the role so that the roles still sync after migrate, and the editor does not get it. The setting also adds nothing when KARNI_SITE_EDITOR_ROLE is None, or when KARNI_ROLES names the editor role, which replaces the module's whole role.
+
+**Fix.** Write each grant as 'app_label.model:action' (the model's label as the admin's addresses show it, /admin/website/article/ is 'website.article', an action the model has, '*' for either part) with a scope ('all', 'own', 'related:&lt;key>', 'custom:&lt;name>', 'tree:&lt;path>'). When KARNI_ROLES has the editor role, put the grants there, or take the role out of KARNI_ROLES.
+
 ## STORE (`STORE`)
 
 <a id="store001"></a>

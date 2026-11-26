@@ -104,6 +104,12 @@ DEFAULTS: dict[str, Any] = {
     # The slug of the content editor role this module declares (karni.roles), or None
     # to declare none. A role of the same slug in KARNI_ROLES replaces it.
     "KARNI_SITE_EDITOR_ROLE": "editor",
+    # Grants added to the editor role, merged over its own (karni_site.roles.editor_grants()):
+    # {"website.article:*": "all"}. Plain data: "app_label.model:action" ("*" for either part)
+    # -> a scope ("all", "own", "related:<key>", "custom:<name>", "tree:<path>"), as in
+    # KARNI_ROLES. An entry the role cannot grant is left out and karni check names it
+    # (SITE026). A role of the same slug in KARNI_ROLES still replaces the whole role.
+    "KARNI_SITE_EDITOR_GRANTS": {},
 }
 
 

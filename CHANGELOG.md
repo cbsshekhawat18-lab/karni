@@ -156,6 +156,16 @@ apply codemods and list the manual steps. This file is the human summary.
   admin class may set `karni_can_add` or `karni_can_delete` back to `True`. See
   [rows the system makes](docs/admin.md#rows-the-system-makes-can_add-and-can_delete).
 
+- **Added: `KARNI_SITE_EDITOR_GRANTS` extends the editor role (karni-site).** Letting
+  karni-site's `editor` change the project's own content meant replacing the whole role in
+  `KARNI_ROLES` and copying its grants, because `karni_site.roles.editor_grants()` reads a
+  model and cannot be called while settings load. The new setting is plain data,
+  `{"website.article:*": "all"}`, merged over the role's own grants when the role is built.
+  A grant the role cannot give (a model or an action the project does not have, a scope the
+  model cannot carry) is left out, so the roles still sync after `migrate`, and `karni
+  check` names it with `SITE026`, as it does a setting that adds nothing because
+  `KARNI_ROLES` replaces the role (which still wins) or `KARNI_SITE_EDITOR_ROLE` is `None`.
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web

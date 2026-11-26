@@ -68,6 +68,7 @@ def test_settings_fragment_is_import_light_and_read_through_get() -> None:
         "KARNI_SITE_MENU_FOLLOW_SEED",
         "KARNI_SITE_REDIRECTS_BEFORE_VIEWS",
         "KARNI_SITE_EDITOR_ROLE",
+        "KARNI_SITE_EDITOR_GRANTS",
         # public forms
         "KARNI_SITE_FORMS",
         "KARNI_SITE_FORM_CLASS",
@@ -107,7 +108,7 @@ def test_entry_points_register_codes_and_checks() -> None:
     assert codes == (
         {f"SITE00{n}" for n in range(1, 10)}
         | {f"SITE01{n}" for n in range(10)}
-        | {f"SITE02{n}" for n in range(6)}
+        | {f"SITE02{n}" for n in range(7)}
     )
 
 

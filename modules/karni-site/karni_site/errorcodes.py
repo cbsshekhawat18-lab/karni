@@ -375,6 +375,27 @@ CONTENT_CODES: Final[tuple[ErrorCode, ...]] = (
             "through karni_site.blocks.text() or image() goes in KARNI_SITE_CODE_BLOCKS."
         ),
     ),
+    ErrorCode(
+        code="SITE026",
+        title="KARNI_SITE_EDITOR_GRANTS adds a grant the editor role cannot give",
+        kind="check",
+        source=f"{_SOURCE}.roles.check_grants",
+        why=(
+            "KARNI_SITE_EDITOR_GRANTS adds grants to the editor role karni-site declares. An "
+            "entry whose model or action the project does not have (a typo, a model renamed or "
+            "removed), or whose scope the model cannot carry ('own' without an owner field), "
+            "is left out of the role so that the roles still sync after migrate, and the editor "
+            "does not get it. The setting also adds nothing when KARNI_SITE_EDITOR_ROLE is None, "
+            "or when KARNI_ROLES names the editor role, which replaces the module's whole role."
+        ),
+        fix=(
+            "Write each grant as 'app_label.model:action' (the model's label as the admin's "
+            "addresses show it, /admin/website/article/ is 'website.article', an action the "
+            "model has, '*' for either part) with a scope "
+            "('all', 'own', 'related:<key>', 'custom:<name>', 'tree:<path>'). When KARNI_ROLES "
+            "has the editor role, put the grants there, or take the role out of KARNI_ROLES."
+        ),
+    ),
 )
 
 CODES = (*CODES, *SEO_CODES, *DEPLOY_CODES, *CONTENT_CODES)  # type: ignore[misc]  # CODES is Final: extended once, here

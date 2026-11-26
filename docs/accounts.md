@@ -315,8 +315,12 @@ A module can declare a role too, through the `karni.roles` entry point
 karni-site declares `editor`, for the people who change a public site's
 content. Module roles join the declaration under `KARNI_ROLES`: name the
 same slug there to replace one, and the module's own setting turns it off
-(`KARNI_SITE_EDITOR_ROLE = None`). `karni sync-roles`, the permission
-matrix and `karni context` treat them like the project's own.
+(`KARNI_SITE_EDITOR_ROLE = None`). To let the editor change the project's
+own content too, add grants to the module's role instead of replacing it:
+`KARNI_SITE_EDITOR_GRANTS = {"website.article:*": "all"}` is merged over the
+role's own grants. It is plain data in settings.py, and `karni check` names
+a grant the role cannot give (`SITE026`). `karni sync-roles`, the permission
+matrix and `karni context` treat module roles like the project's own.
 
 The defaults are deliberately boring. A model with no `Karni` class is owned
 by whoever created it, has no scope paths and has the four standard actions.
