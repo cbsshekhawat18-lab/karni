@@ -163,8 +163,9 @@ The mark is shown once per feature, in these places and nowhere else:
 
 - the feature's line in the list below,
 - one *Experimental* note at the top of the docs section that describes the
-  feature (for a package that is experimental as a whole, also at the top of
-  its README),
+  feature (a feature documented on several pages, such as the games, has
+  one on each, and a package that is experimental as a whole has one at the
+  top of its README). Other sections that mention the feature link to it,
 - the docstring (Python) or doc comment (TypeScript) of the feature's public
   entry points: the module or package that is the feature's own, and the main
   class, function or component a project imports from a shared module such
@@ -222,13 +223,14 @@ Experimental now:
   procedure and rule K311, [recipes](app-spec.md#recipes) (`karni recipes
   list` and `show`, `--match` and its ranking, the blank start, the
   `recipe.toml` format and its schema, the `karni.recipes` entry point group,
-  `karni recipes --json` and its schema, `karni_cli.recipes`),
-  [clarifying questions](app-spec.md#questions) (`karni plan --questions`, its
-  `--max`, `--json` and schema, the question ids and rules, `karni spec
-  answer`, `karni_cli.spec.questions` and `karni_cli.spec.edit`) and
+  `karni recipes --json` and its schema, `karni_cli.recipes`) and
   [the MCP tools](app-spec.md#mcp-tools) `recipes`, `spec_validate`,
   `questions`, `answer`, `plan`, `build` and `modules` with their results'
   schema (`karni_cli.agent_tools`). No project was made through it yet.
+- [Clarifying questions](app-spec.md#questions): `karni plan --questions`
+  (its `--max`, `--json` and schema, the question ids and the rules that
+  choose them), `karni spec answer`, `karni_cli.spec.questions` and
+  `karni_cli.spec.edit`. No project was made through them yet.
 - [External tables, views and a second database](models.md#external-tables-views-and-a-second-database):
   the `class Karni` options `external`, `writable` and `database`, `karni.db`
   (with `DatabaseRouter`, `karni.db.checks` and `karni.db.introspection`),
@@ -245,6 +247,22 @@ Experimental now:
   of `karni.people`, its events, the `KARNI_PEOPLE*` settings, the people
   endpoints and `fk:people.Person` in `karni.yaml`. It is to be proven by
   the six recipes first, and one uses it.
+- [Volume seeding](seeding.md#volume-seeding): `karni seed --volume` and
+  `--batch-size`, `karni.bulk_seeding`, the `volume`, `bulk` and
+  `batch_size` arguments of `karni.seeding.seed`, `karni.seeding.volume_rows`,
+  the seed ledger `.karni/local/seeded.json`, the report's `volume`, `bulk`
+  and `timings`, and the `KARNI_SEED_BULK_THRESHOLD`, `KARNI_SEED_BATCH_SIZE`
+  and `KARNI_SEED_LEDGER` settings, with the seed volume of `karni plan`
+  (`karni_cli.spec.plan.seed_time_class`, the `seed_bulk_threshold` fact).
+  No project or example uses it yet.
+- [The scaling check](testing.md#3-the-scaling-check): `KARNI_SCALING_ROWS`,
+  `karni.performance.Scaling`, `scaling_rows`, `query_scaling` on a viewset,
+  and `ScalingResult`'s `rows`, `seconds`, `budget`, `endpoint`, `too_slow`
+  and `slow_message()`. No project or example uses it yet.
+- [Query plans](debugging/queries.md#query-plans-explain): `karni queries
+  --explain`'s analysis on PostgreSQL, `karni.api.explain`, the `seq_scans`
+  of `--json` and `KARNI_EXPLAIN_SEQ_SCAN_ROWS`. No project or example uses
+  it yet.
 - [`@karni/ai-ui`](ai-extraction.md#react): `ExtractButton`, `ExtractPreview`
   and `useExtract`. No project or example renders it yet.
 - [`@karni/reports-ui`](reports.md#in-react): `ReportButton` and `useReport`.
@@ -448,25 +466,12 @@ promise above covers them:
   (`karni context --summary`, `--app`, `--model` and `--max-tokens`, the
   same flags of `manage.py karni_context`, `karni.introspect`'s
   `summary_context`, `app_context`, `model_context`, `field_text`,
-  `resolve_apps` and `resolve_models`),
+  `resolve_apps` and `resolve_models`) and
   [the check cache](enforcement.md#the-check-cache) (`karni check
   --changed [REF]` and `--no-cache`, `manage.py karni_check --changed` and
   `--no-cache`, `.karni/local/check-cache.json`, `.karni/local/eslintcache`,
-  `karni.testing.checkcache` and `KARNI_CHECK_CACHE`),
-  [volume seeding](seeding.md#volume-seeding) (`karni seed --volume` and
-  `--batch-size`, `karni.bulk_seeding`, the `volume`, `bulk` and
-  `batch_size` arguments of `karni.seeding.seed`, `karni.seeding.volume_rows`,
-  the seed ledger `.karni/local/seeded.json`, the report's `volume`, `bulk`
-  and `timings`, `KARNI_SEED_BULK_THRESHOLD`, `KARNI_SEED_BATCH_SIZE` and
-  `KARNI_SEED_LEDGER`), [the scaling settings](testing.md#3-the-scaling-check)
-  (`KARNI_SCALING_ROWS`, `karni.performance.Scaling`, `scaling_rows`,
-  `query_scaling` on a viewset, and `ScalingResult`'s `rows`, `seconds`,
-  `budget`, `endpoint`, `too_slow` and `slow_message()`),
-  [query plans](debugging/queries.md#query-plans-explain) (`karni queries
-  --explain`'s analysis on PostgreSQL, `karni.api.explain`, the `seq_scans`
-  of `--json` and `KARNI_EXPLAIN_SEQ_SCAN_ROWS`), the seed volume of
-  `karni plan` (`karni_cli.spec.plan.seed_time_class`, the `seed_bulk_threshold`
-  fact) and `scripts/benchmark/large_project.py` with its baseline.
+  `karni.testing.checkcache` and `KARNI_CHECK_CACHE`). Volume seeding, the
+  scaling check and query plans stay experimental.
 - [The `karni-reports` module](reports.md): the whole of `karni_reports`
   (`Report`, `register`, `get_report`, the renderers, `GeneratedReport`,
   `karni_reports.services`), the `KARNI_REPORTS_*` settings, the

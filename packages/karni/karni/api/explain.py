@@ -1,4 +1,4 @@
-"""``karni queries --explain`` on PostgreSQL: each query's plan, and the scans to fix.
+"""Experimental. ``karni queries --explain`` on PostgreSQL: each query's plan, and the scans to fix.
 
 :func:`explain_analyze` runs ``EXPLAIN (ANALYZE, FORMAT JSON)`` for every
 distinct ``SELECT`` an endpoint ran, each in a savepoint inside the request's

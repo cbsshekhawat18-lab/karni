@@ -1,4 +1,4 @@
-"""Volume seeding: realistic row counts for performance work, inserted in bulk.
+"""Experimental. Volume seeding: realistic row counts for performance work, inserted in bulk.
 
 ::
 

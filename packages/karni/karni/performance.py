@@ -442,7 +442,7 @@ def _scaling_rows(value: Any, where: str) -> tuple[int, int]:
 
 @dataclass(frozen=True, init=False)
 class Scaling:
-    """``query_scaling = Scaling(rows=(5, 500), seconds=0.3)``: a viewset's scaling.
+    """Experimental. ``query_scaling = Scaling(rows=(5, 500), seconds=0.3)``: a viewset's scaling.
 
     ``rows`` are the row counts the scaling check compares (default
     ``KARNI_SCALING_ROWS``, else :data:`DEFAULT_SCALING_ROWS`): a list is
