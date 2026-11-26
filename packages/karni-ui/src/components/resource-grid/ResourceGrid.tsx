@@ -215,7 +215,7 @@ function rowKey(row: unknown): string {
   return JSON.stringify(row);
 }
 
-/** A resource's rows as cards, with search, sort, filters and paging. */
+/** Experimental. A resource's rows as cards, with search, sort, filters and paging. */
 export function ResourceGrid<T>(props: ResourceGridProps<T>): React.ReactElement {
   const {
     resource,

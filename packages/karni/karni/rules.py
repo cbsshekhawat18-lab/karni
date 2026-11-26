@@ -1,4 +1,4 @@
-"""Rules a model declares in ``class Karni`` and Karni keeps on every write.
+"""Experimental. Rules a model declares in ``class Karni`` and Karni keeps on every write.
 
 A business rule written as hand code in each project (a price above zero, one
 booking per member and slot, a lesson only in my own course, no delete while

@@ -382,7 +382,7 @@ def declare(
     describe: str = "",
     registry: Registry | None = None,
 ) -> Declaration:
-    """Declare a family event, in the publishing app's ``events.py``.
+    """Experimental. Declare a family event, in the publishing app's ``events.py``.
 
     :param name: ``<prefix>.<record>.<moment>``, for example ``"shop.order.paid"``.
     :param version: the payload's shape, from 1. Declare version 2 next to 1
@@ -459,7 +459,7 @@ def subscribe(
     name: str | None = None,
     registry: Registry | None = None,
 ) -> Callable[[F], F]:
-    """Run the decorated ``subscriber(event)`` for each ``event`` published.
+    """Experimental. Run the decorated ``subscriber(event)`` for each ``event`` published.
 
     Put subscribers in ``<app>/listeners.py``. Name the event as a string and
     never import its publisher: when the publisher is not installed, the
@@ -692,7 +692,7 @@ def publish(
     registry: Registry | None = None,
     **fields: Any,
 ) -> Event:
-    """Publish a declared event inside the caller's transaction.
+    """Experimental. Publish a declared event inside the caller's transaction.
 
     Writes one outbox row, and one delivery row per subscriber, in the
     current transaction, so the event exists exactly when the change

@@ -1,4 +1,4 @@
-"""Home tiles: what each role sees first, declared once, from any part.
+"""Experimental. Home tiles: what each role sees first, declared once, from any part.
 
 A tile is one box on a home page: a number (``stat``), a short list
 (``list``), a chart (``chart``) or a component of the app's own

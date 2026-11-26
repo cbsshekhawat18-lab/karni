@@ -1,4 +1,4 @@
-"""Family events with an outbox: one part reacts to another without importing it.
+"""Experimental. Family events with an outbox: one part reacts to another without importing it.
 
 The API lives in :mod:`karni.events` (``declare``, ``publish``, ``subscribe``,
 ``once``). This app keeps the outbox those calls write to and deliver from:

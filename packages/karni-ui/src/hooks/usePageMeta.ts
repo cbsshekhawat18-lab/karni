@@ -28,7 +28,7 @@ function descriptionTag(): HTMLMetaElement {
   return created;
 }
 
-/** Sets `document.title` and the description meta tag while the caller is mounted. */
+/** Experimental. Sets `document.title` and the description meta tag while the caller is mounted. */
 export function usePageMeta({ title, description, siteName }: PageMeta): void {
   useEffect(() => {
     if (title === undefined) return undefined;

@@ -1,4 +1,4 @@
-"""karni-commerce: one cart, checkout and order path for anything a project sells.
+"""Experimental. karni-commerce: one cart, checkout and order path for anything a project sells.
 
 A project's apps sell different things (a product, a booking, a course, a
 listing) through the same path: a cart line names a *kind* and an item,

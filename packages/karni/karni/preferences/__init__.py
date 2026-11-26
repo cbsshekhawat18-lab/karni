@@ -1,4 +1,4 @@
-"""The preferences contract: the project's details and the settings parts declare.
+"""Experimental. The preferences contract: the project's details and the settings parts declare.
 
 A business changes these without code, on one Settings page: its details
 (name, legal name, address, phone, contact email, sender, logo, time zone,

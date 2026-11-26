@@ -1,4 +1,4 @@
-"""The timeline contract: one stream of moments per person and per record.
+"""Experimental. The timeline contract: one stream of moments per person and per record.
 
 A project that holds several parts shows, on a person's page and on a
 record's page (an order, a ticket, a deal), what happened to them in every

@@ -411,7 +411,7 @@ export interface DashboardTilesProps {
   className?: string;
 }
 
-/** The home tiles of the signed-in person, in a responsive grid. */
+/** Experimental. The home tiles of the signed-in person, in a responsive grid. */
 export function DashboardTiles(props: DashboardTilesProps): React.ReactElement | null {
   const { onOpen, tiles, empty = null, now, className } = props;
   const query = useDashboardTiles();

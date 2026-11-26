@@ -1,4 +1,4 @@
-"""The notifications contract: message kinds, edited emails, the inbox, switches.
+"""Experimental. The notifications contract: message kinds, edited emails, the inbox, switches.
 
 A project that holds several parts sends one set of messages: an order is
 paid, a booking is confirmed, a deal is assigned. Each part declares the

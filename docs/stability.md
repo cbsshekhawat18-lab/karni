@@ -245,8 +245,70 @@ Experimental now:
   uses it yet.
 - [People](people.md): the `karni.people` app and its models, the functions
   of `karni.people`, its events, the `KARNI_PEOPLE*` settings, the people
-  endpoints and `fk:people.Person` in `karni.yaml`. It is to be proven by
-  the six recipes first, and one uses it.
+  endpoints and `fk:people.Person` in `karni.yaml`. It arrived with the family foundation in 0.6.0 and only Karni's own modules
+  and recipes use it: the rebuilds of the recipes will prove or reshape it.
+- [Family events](family-events.md): `declare`, `publish`, `subscribe`, `once`,
+  `Event`, `Declaration`, `Subscriber`, `Registry` and `CONTRACT` in
+  `karni.events`, the `karni.outbox` app (its models, admin, tasks, beat
+  entries, `karni.outbox.delivery`, `dispatch`, `checks` and `health`), the
+  `KARNI_EVENTS_*` settings, the `events:` lines of `karni check`, the outbox
+  rows in `karni trace`, karni-payments' `payments.*` events, and
+  `capture_events`, `deliver_now` and `assert_events_declared` in
+  `karni.testing`.
+  It arrived with the family foundation in 0.6.0 and only Karni's own modules
+  and recipes use it: the rebuilds of the recipes will prove or reshape it.
+- [Timeline](timeline.md): the `karni.timeline` app (its models
+  `TimelineEntry` and `TimelineLink`, admin, task and beat entry,
+  `karni.timeline.api`, `access`, `checks`, `services` and `subscribers`), the
+  functions and `CONTRACT` of `karni.timeline`, the `timeline=` option of
+  `declare()`, `GET /api/timeline/`, the `KARNI_TIMELINE_*` settings, the
+  timeline titles of the people events and of `payments.payment.succeeded`,
+  and the person karni-payments' events carry.
+  It arrived with the family foundation in 0.6.0 and only Karni's own modules
+  and recipes use it: the rebuilds of the recipes will prove or reshape it.
+- [Notifications](notify.md): the `karni.notify` app (its models
+  `EmailTemplate`, `Notification`, `Choice` and `Unsubscribe`, admin, task
+  and beat entry, `karni.notify.api`, `viewsets`, `editor`, `moves`,
+  `source`, `adopt`, `checks` and `services`), the names and `CONTRACT` of
+  `karni.notify`, the `channels=` and `replace=` arguments and `CHANNELS`,
+  `deliver` and `is_silenced` of `karni.mail`, `/api/inbox/`,
+  `/api/email-templates/`, `/api/notify/unsubscribe/`, `features.notify`,
+  and the `KARNI_NOTIFY_*` and `KARNI_MAIL_SOURCE` settings.
+  It arrived with the family foundation in 0.6.0 and only Karni's own modules
+  and recipes use it: the rebuilds of the recipes will prove or reshape it.
+- [Preferences](preferences.md): the `karni.preferences` app and its models,
+  the names and `CONTRACT` of `karni.preferences`, `/api/preferences/`, the
+  admin and the `KARNI_PREFERENCES_*` settings.
+  It arrived with the family foundation in 0.6.0 and only Karni's own modules
+  and recipes use it: the rebuilds of the recipes will prove or reshape it.
+- [Home tiles per role](api.md#home-tiles-per-role-experimental): `karni.tiles` (`Tile`,
+  `register`), `GET /api/dashboard/`, karni.yaml's `dashboard:`, and
+  `DashboardTiles`, `registerTile` and `registerTileKind` in `@karni/ui`.
+  It arrived with the family foundation in 0.6.0 and only Karni's own modules
+  and recipes use it: the rebuilds of the recipes will prove or reshape it.
+- [Rules](rules.md): the `class Karni` options `bounds`, `unique`,
+  `targets`, `frozen`, `delete` and `moves` (`karni.rules`),
+  `Access(delete=..., assign=...)`, the written-row check, `Matching`,
+  [row actions](api.md#row-actions-experimental) (`karni.api.actions`) and the karni.yaml
+  keys that write them.
+  It arrived with the family foundation in 0.6.0 and only Karni's own modules
+  and recipes use it: the rebuilds of the recipes will prove or reshape it.
+- [Catalogues, money and page titles](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/README.md#catalogues-money-and-page-titles-experimental):
+  `ResourceGrid`, the money helpers and `usePageMeta` in `@karni/ui`.
+  It arrived with the family foundation in 0.6.0 and only Karni's own modules
+  and recipes use them: the rebuilds of the recipes will prove or reshape them.
+- [The `karni-commerce` module](commerce.md): the whole of `karni_commerce`
+  (the models, the `Sellable` adapter and its registry, `karni_commerce.services`,
+  the signals of `karni_commerce.events`, `karni_commerce.fulfilment`, the
+  checkout validator, the email kinds), the `KARNI_COMMERCE_*` settings, the
+  cart and order endpoints and their answers, and everything in
+  `@karni/commerce-ui`.
+  It arrived with the family foundation in 0.6.0 and only Karni's own modules
+  and recipes use it: the rebuilds of the recipes will prove or reshape it.
+- [karni-payments' signals](https://github.com/cbsshekhawat18-lab/karni/blob/main/modules/karni-payments/README.md#signals-experimental):
+  the signals of `karni_payments.events` (`payment_status_changed`,
+  `refund_created` and `refund_status_changed`). It arrived with the family foundation in 0.6.0 and only Karni's own modules
+  and recipes use them: the rebuilds of the recipes will prove or reshape them.
 - [Volume seeding](seeding.md#volume-seeding): `karni seed --volume` and
   `--batch-size`, `karni.bulk_seeding`, the `volume`, `bulk` and
   `batch_size` arguments of `karni.seeding.seed`, `karni.seeding.volume_rows`,
@@ -368,8 +430,6 @@ promise above covers them:
 - [Names, links and rights on resource pages](ui.md#names-links-and-rights-on-resource-pages):
   `class Karni: label`, how a related row is named and linked, and the
   `onCreate` and `onEdit` rights of the resource pages.
-- [Catalogues, money and page titles](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/README.md#catalogues-money-and-page-titles):
-  `ResourceGrid`, the money helpers and `usePageMeta` in `@karni/ui`.
 - [AI extraction](ai-extraction.md): the karni-ai module (`karni_ai`, its
   `POST /api/ai/extract/` endpoint and answer, `/api/ai/`, the `AICall`
   model, the `KARNI_AI_*` settings and each provider's key and model
@@ -377,42 +437,8 @@ promise above covers them:
   `karni_ai.extraction`, `karni_ai.schema`, `karni_ai.sources`,
   `karni_ai.services.fetch`, `karni_ai.usage`). `@karni/ai-ui` stays
   experimental.
-- [Family events](family-events.md): `declare`, `publish`, `subscribe`, `once`,
-  `Event`, `Declaration`, `Subscriber`, `Registry` and `CONTRACT` in
-  `karni.events`, the `karni.outbox` app (its models, admin, tasks, beat
-  entries, `karni.outbox.delivery`, `dispatch`, `checks` and `health`), the
-  `KARNI_EVENTS_*` settings, the `events:` lines of `karni check`, the outbox
-  rows in `karni trace`, karni-payments' `payments.*` events, and
-  `capture_events`, `deliver_now` and `assert_events_declared` in
-  `karni.testing`.
-- [Timeline](timeline.md): the `karni.timeline` app (its models
-  `TimelineEntry` and `TimelineLink`, admin, task and beat entry,
-  `karni.timeline.api`, `access`, `checks`, `services` and `subscribers`), the
-  functions and `CONTRACT` of `karni.timeline`, the `timeline=` option of
-  `declare()`, `GET /api/timeline/`, the `KARNI_TIMELINE_*` settings, the
-  timeline titles of the people events and of `payments.payment.succeeded`,
-  and the person karni-payments' events carry.
-- [Notifications](notify.md): the `karni.notify` app (its models
-  `EmailTemplate`, `Notification`, `Choice` and `Unsubscribe`, admin, task
-  and beat entry, `karni.notify.api`, `viewsets`, `editor`, `moves`,
-  `source`, `adopt`, `checks` and `services`), the names and `CONTRACT` of
-  `karni.notify`, the `channels=` and `replace=` arguments and `CHANNELS`,
-  `deliver` and `is_silenced` of `karni.mail`, `/api/inbox/`,
-  `/api/email-templates/`, `/api/notify/unsubscribe/`, `features.notify`,
-  and the `KARNI_NOTIFY_*` and `KARNI_MAIL_SOURCE` settings.
-- [Preferences](preferences.md): the `karni.preferences` app and its models,
-  the names and `CONTRACT` of `karni.preferences`, `/api/preferences/`, the
-  admin and the `KARNI_PREFERENCES_*` settings.
 - [Emails at business moments](events.md#emails-at-business-moments):
   `karni.mail` (`send_templated`, its `kind` and `KARNI_MAIL_DISABLED_KINDS`).
-- [Home tiles per role](api.md#home-tiles-per-role): `karni.tiles` (`Tile`,
-  `register`), `GET /api/dashboard/`, karni.yaml's `dashboard:`, and
-  `DashboardTiles`, `registerTile` and `registerTileKind` in `@karni/ui`.
-- [Rules](rules.md): the `class Karni` options `bounds`, `unique`,
-  `targets`, `frozen`, `delete` and `moves` (`karni.rules`),
-  `Access(delete=..., assign=...)`, the written-row check, `Matching`,
-  [row actions](api.md#row-actions) (`karni.api.actions`) and the karni.yaml
-  keys that write them.
 - [The module catalog](modules.md#the-module-catalog): the `karni.module.toml`
   manifest format and the feature manifests, the `karni.modules` entry point
   group, `karni.catalog` (with `python -m karni.catalog`),
@@ -486,15 +512,6 @@ promise above covers them:
   `application/vnd.karni.upload` reference part, `manage.py
   karni_thumbnails` and the `file:protected` and `image:protected` field
   types. `@karni/storage-ui` stays experimental.
-- [The `karni-commerce` module](commerce.md): the whole of `karni_commerce`
-  (the models, the `Sellable` adapter and its registry, `karni_commerce.services`,
-  the signals of `karni_commerce.events`, `karni_commerce.fulfilment`, the
-  checkout validator, the email kinds), the `KARNI_COMMERCE_*` settings, the
-  cart and order endpoints and their answers, and everything in
-  `@karni/commerce-ui`.
-- [karni-payments' signals and test checkout](https://github.com/cbsshekhawat18-lab/karni/blob/main/modules/karni-payments/README.md#signals):
-  the signals of `karni_payments.events`, the test provider's checkout page
-  and `KARNI_PAYMENTS_TEST_CHECKOUT_PAGE`.
 - [API versions](api.md#api-versions): the `KARNI_API_VERSION`,
   `KARNI_API_VERSIONS` and `KARNI_API_UNVERSIONED` settings, `karni.api.versions`
   (with `api_urls`, `ApiVersionHeadersMiddleware` and `VersionedSchemaGenerator`),
@@ -507,6 +524,8 @@ promise above covers them:
   `karni.conf.logging.QuietPaths`.
 - `karni.placeholder` (drawn, deterministic placeholder images) and
   `manage.py karni_publish_web`.
+- [karni-payments' test checkout](https://github.com/cbsshekhawat18-lab/karni/blob/main/modules/karni-payments/README.md#trying-a-checkout-in-the-browser):
+  the test provider's checkout page and `KARNI_PAYMENTS_TEST_CHECKOUT_PAGE`.
 
 Stable since 0.4.1:
 
