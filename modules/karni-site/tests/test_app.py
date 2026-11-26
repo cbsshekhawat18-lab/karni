@@ -60,6 +60,7 @@ def test_settings_fragment_is_import_light_and_read_through_get() -> None:
         "KARNI_SITE_CACHE",
         "KARNI_SITE_CACHE_TIMEOUT",
         "KARNI_SITE_SEED_ON_RENDER",
+        "KARNI_SITE_CODE_BLOCKS",
         "KARNI_SITE_MENU_ROWS",
         "KARNI_SITE_MENU_ROWS_LIMIT",
         "KARNI_SITE_MENU_SECTIONS",
@@ -105,7 +106,7 @@ def test_entry_points_register_codes_and_checks() -> None:
     assert codes == (
         {f"SITE00{n}" for n in range(1, 10)}
         | {f"SITE01{n}" for n in range(10)}
-        | {f"SITE02{n}" for n in range(5)}
+        | {f"SITE02{n}" for n in range(6)}
     )
 
 

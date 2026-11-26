@@ -347,4 +347,26 @@ DEPLOY_CODES: Final[tuple[ErrorCode, ...]] = (
     ),
 )
 
-CODES = (*CODES, *SEO_CODES, *DEPLOY_CODES)  # type: ignore[misc]  # CODES is Final: extended once, here
+#: What the client edits: blocks no template names any more.
+CONTENT_CODES: Final[tuple[ErrorCode, ...]] = (
+    ErrorCode(
+        code="SITE025",
+        title="Blocks no template shows any more",
+        kind="warning",
+        source=f"{_SOURCE}.orphans (karni check)",
+        why=(
+            "A block is stored the first time a page renders its {% editable %} or "
+            "{% editable_image %}. When the tag leaves the template, the row stays, and the "
+            "admin's Page content still lists it, so a client can edit text that no page shows. "
+            "karni check reads the templates and prints the blocks whose key no template names. "
+            "It is a warning: it never fails the run."
+        ),
+        fix=(
+            "List them with `python manage.py karni_site_orphans` and remove them with --delete "
+            "(--include-edited for the ones someone edited). A key that code of your own stores "
+            "through karni_site.blocks.text() or image() goes in KARNI_SITE_CODE_BLOCKS."
+        ),
+    ),
+)
+
+CODES = (*CODES, *SEO_CODES, *DEPLOY_CODES, *CONTENT_CODES)  # type: ignore[misc]  # CODES is Final: extended once, here

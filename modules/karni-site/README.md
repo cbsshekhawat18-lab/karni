@@ -225,6 +225,47 @@ A page's blocks are one cache entry, read once per request: a page with
 fifty blocks costs one cache read, and saving a block clears its page's
 entry. When the database cannot be read, the template's default is shown.
 
+### Blocks no template shows any more
+
+A block stays in the database when its `{% editable %}` leaves the
+template. *Page content* marks it: its *in a template* column says no, the
+filter of the same name lists such blocks, and the block's form says that a
+change there changes nothing visitors see. `karni check` prints them
+(`SITE025`, a warning that never fails the run), and a command lists and
+removes them:
+
+```sh
+python manage.py karni_site_orphans                             # lists them: nothing changes
+python manage.py karni_site_orphans --delete                    # deletes those nobody edited
+python manage.py karni_site_orphans --delete --include-edited   # and the edited ones too
+```
+
+Listing is the default, a dry run: the scan cannot see everything (below),
+and a command in a deploy script must not delete content unless asked. An
+orphan someone edited is named and kept until `--include-edited` asks for
+it, because their text would be gone if the key came back to a template. A
+delete is a soft delete, as in the admin.
+
+The admin, the command and the check read the templates and never render a
+page (`karni_site.orphans`). They read the folders of each Django template
+engine (its `DIRS` and every installed app's `templates/`, Django's own
+left out), again only when a file changed. A block is *in a template* when
+its key is written in quotes in a tag (`{% editable "home.title" %}`, a tag
+of your own around `karni_site.blocks.text()`,
+`{% include "partials/cta.html" with key="home.cta" %}`), when it is under
+the `editable="..."` of a `{% karni_form %}`, or when
+`KARNI_SITE_CODE_BLOCKS` names it. It is *not seen*, and never called an
+orphan, when a key the scan cannot read could be it: an `{% editable %}`
+whose key is a variable or built with a filter (`"team."|add:member.slug`
+makes every `team.*` key unsure, a bare variable every key), or when no
+template has a block tag at all. A commented-out tag is not a use.
+
+What the scan cannot see: keys your own Python code passes to
+`karni_site.blocks.text()` or `image()` (a view, a middleware, a tag of your
+own given a variable), and templates that do not come from a folder (a
+loader of your own, another template engine). Name such keys in
+`KARNI_SITE_CODE_BLOCKS`, shell wildcards allowed (`["promo.*"]`).
+
 ### `{% get_menu %}`: menus in the design's own markup
 
 ```django
@@ -712,6 +753,7 @@ environment.
 | `KARNI_SITE_CACHE` | `"default"` | The cache alias blocks, menus, redirects, page SEO entries and the settings are kept in. |
 | `KARNI_SITE_CACHE_TIMEOUT` | `3600` | Seconds a cached entry lives. Every save clears what it changed, so this is a backstop. |
 | `KARNI_SITE_SEED_ON_RENDER` | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). `manage.py karni_site_seed` stores them whatever this says. |
+| `KARNI_SITE_CODE_BLOCKS` | `[]` | Block keys your own code stores through `karni_site.blocks.text()` or `image()`, which no template names (shell wildcards: `"promo.*"`). They are never orphans. |
 | `KARNI_SITE_MENU_ROWS` | `"karni_site.menus.menu_rows"` | The `(model, item) -> rows` function a *children from* item lists. The default is the model's default manager, so its scopes apply. |
 | `KARNI_SITE_MENU_ROWS_LIMIT` | `100` | At most this many rows per *children from* item. |
 | `KARNI_SITE_MENU_SECTIONS` | `True` | Whether a menu item is active on every page under its own path too (`/services/` on `/services/web/`). The home page never is. |
@@ -770,6 +812,11 @@ environment.
   every render.
 - `SITE020`: every form a `{% karni_form %}` names exists.
 
+It also prints `SITE025`, a warning that never fails the run, for the
+blocks no template names any more
+([above](#blocks-no-template-shows-any-more)). It reads them from the
+database when the database answers, and prints nothing otherwise.
+
 `karni check --seo` runs `SITE010` to `SITE018` (see above). A tag written
 wrongly fails when the template compiles, with `SITE003` (`SITE021` for
 `{% karni_form %}`, `SITE019` for `{% karni_seo %}`, `{% image %}` and a
@@ -789,6 +836,9 @@ fails while `manage.py karni_site_seed` renders it stops that command with
 - `KARNI_SITE_SEED_ON_RENDER = False`: nothing is written while a page
   renders. Store the defaults with `manage.py karni_site_seed` in the
   deploy, or load blocks, menus and settings with `karni load`.
+- `KARNI_SITE_CODE_BLOCKS`: the block keys your own code stores, which are
+  never orphans. `karni_site.orphans.scan()` and `classify()` tell orphans
+  apart for code of your own.
 - `KARNI_SITE_MENU_ROWS`: which rows a *children from* item lists.
 - `KARNI_SITE_MENU_FOLLOW_SEED = False`: a seeded menu never follows its seed,
   and `karni_site.menus.sync_menu()` follows one when you choose.

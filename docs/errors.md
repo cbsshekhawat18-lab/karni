@@ -4519,6 +4519,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Open the page the message names with `karni serve` (or read the error the command printed) and fix the view or the template. --keep-going reports the failing pages without failing the run.
 
+<a id="site025"></a>
+
+### SITE025: Blocks no template shows any more
+
+*system check (warning)* · from `karni_site.orphans (karni check)`
+
+**Why Karni objects.** A block is stored the first time a page renders its {% editable %} or {% editable_image %}. When the tag leaves the template, the row stays, and the admin's Page content still lists it, so a client can edit text that no page shows. karni check reads the templates and prints the blocks whose key no template names. It is a warning: it never fails the run.
+
+**Fix.** List them with `python manage.py karni_site_orphans` and remove them with --delete (--include-edited for the ones someone edited). A key that code of your own stores through karni_site.blocks.text() or image() goes in KARNI_SITE_CODE_BLOCKS.
+
 ## STORE (`STORE`)
 
 <a id="store001"></a>

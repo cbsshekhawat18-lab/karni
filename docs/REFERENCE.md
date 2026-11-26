@@ -2261,6 +2261,7 @@ class Lead(BaseModel):
 | `KARNI_SITE_CACHE` |  | `"default"` | The cache alias blocks, menus, redirects, page SEO entries and the settings live in. |
 | `KARNI_SITE_CACHE_TIMEOUT` |  | `3600` | Seconds a cached entry lives. Every save clears what it changed, so this is a backstop. |
 | `KARNI_SITE_SEED_ON_RENDER` | `KARNI_SITE_SEED_ON_RENDER` | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). False: nothing is written while a page renders. |
+| `KARNI_SITE_CODE_BLOCKS` |  | `[]` | Block keys code of your own stores through karni_site.blocks.text() or image() (a view, a tag of your own given a variable), which no template names. Shell wildcards: "promo.*". They are never orphans (karni_site.orphans, manage.py karni_site_orphans, SITE025). |
 | `KARNI_SITE_MENU_ROWS` |  | `"karni_site.menus.menu_rows"` | The rows a menu item's "children from" model contributes: (model, item) -&gt; iterable of rows with get_absolute_url(). A dotted path. |
 | `KARNI_SITE_MENU_ROWS_LIMIT` |  | `100` | At most this many rows per "children from" item. |
 | `KARNI_SITE_MENU_SECTIONS` |  | `True` | True: a menu item is active (item.active) on every page under its own path too, so "Services" at /services/ stays marked on /services/web/. The home page (/) never is. False: an item is active on its own page and when one of its children is. |
@@ -3083,6 +3084,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`SITE022`](errors.md#site022) | exception | The form view is not routed |
 | [`SITE023`](errors.md#site023) | exception | A notification does not say who to email |
 | [`SITE024`](errors.md#site024) | exception | A page fails while karni_site_seed renders it |
+| [`SITE025`](errors.md#site025) | warning | Blocks no template shows any more |
 | [`STORE001`](errors.md#store001) | check | KARNI_STORAGE_PROVIDER names no preset |
 | [`STORE002`](errors.md#store002) | check | The storage provider has no credentials |
 | [`STORE003`](errors.md#store003) | check | The storage preset needs a value it does not have |

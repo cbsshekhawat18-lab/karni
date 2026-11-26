@@ -356,6 +356,14 @@ tags work in a template written by hand:
   the client uploads their own.
 - **Redirects** for old addresses, and **page titles and descriptions** per
   page.
+- **Blocks no page shows any more.** A block stays when its tag leaves the
+  template. *Page content* marks it (*in a template*: no) and filters on it,
+  and `python manage.py karni_site_orphans` lists such blocks (`--delete`
+  removes those nobody edited). They are found by reading the templates, so
+  a key built while the page renders is *not seen*, never called an orphan,
+  and a key your own Python code stores goes in `KARNI_SITE_CODE_BLOCKS`
+  ([the module's README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site#blocks-no-template-shows-any-more)
+  says what the scan reads).
 
 What the import marks:
 
@@ -861,7 +869,8 @@ site app like any other app, runs `karni-site`'s checks (`SITE001`: the
 templates get the request, `SITE002`: every `{% ifactive %}` names a URL
 that exists, `SITE004`: the templates get `site`, `SITE005`: the redirect
 middleware is installed, `SITE008`: no block key has two defaults, `SITE020`:
-every `{% karni_form %}` names a form that exists), and `karni test` runs its
-page test and each form's test. `karni check --seo` renders every page
+every `{% karni_form %}` names a form that exists), prints `SITE025` for the
+blocks no template names any more (a warning, never a failure), and `karni
+test` runs its page test and each form's test. `karni check --seo` renders every page
 and checks what search engines read ([SEO by default](#seo-by-default)), and
 names a menu item whose page is gone (`SITE007`).

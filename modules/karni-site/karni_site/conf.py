@@ -67,6 +67,10 @@ DEFAULTS: dict[str, Any] = {
     # Whether the first render of a template stores its defaults (blocks, a menu's
     # seed, the site's details). False: nothing is written while a page renders.
     "KARNI_SITE_SEED_ON_RENDER": env.bool("KARNI_SITE_SEED_ON_RENDER", default=True),
+    # Block keys code of your own stores through karni_site.blocks.text() or image() (a view,
+    # a tag of your own given a variable), which no template names. Shell wildcards: "promo.*".
+    # They are never orphans (karni_site.orphans, manage.py karni_site_orphans, SITE025).
+    "KARNI_SITE_CODE_BLOCKS": [],
     # The rows a menu item's "children from" model contributes: (model, item) ->
     # iterable of rows with get_absolute_url(). A dotted path.
     "KARNI_SITE_MENU_ROWS": "karni_site.menus.menu_rows",

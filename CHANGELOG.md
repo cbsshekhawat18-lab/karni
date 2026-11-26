@@ -86,6 +86,18 @@ apply codemods and list the manual steps. This file is the human summary.
   database call, such as `karni.admin.listing:94 in table_rows`. A project frame that called
   Karni code is still named when it is not a pass-through, and a serializer field still wins.
 
+- **Added: blocks no template shows any more are marked, listed and removed
+  (karni-site).** A block whose `{% editable %}` or `{% editable_image %}` left the
+  templates stayed in the admin's *Page content* like a live block, so a client could edit
+  text no page shows. The list now has an *in a template* column and filter, and an
+  orphan's form says that a change there changes nothing visitors see. `python manage.py
+  karni_site_orphans` lists them (a dry run by default), `--delete` removes those nobody
+  edited and `--include-edited` the edited ones too. `karni check` prints `SITE025`, a
+  warning that never fails the run. Orphans are found by reading the templates
+  (`karni_site.orphans`), never by rendering a page: a key a template builds while its page
+  renders is *not seen* and never called an orphan, and `KARNI_SITE_CODE_BLOCKS` names the
+  keys your own code stores.
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web
