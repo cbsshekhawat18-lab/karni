@@ -29,6 +29,10 @@ class KarniAdminConfig(AppConfig):
     login screen, unless the site already sets ``login_template``, and the
     *API cache* screen (:mod:`karni.admin.cache`).
 
+    Project and third-party ``admin.py`` registrations happen first whichever
+    of ``django.contrib.admin`` and ``karni.admin`` is listed first
+    (:func:`explicit_registrations_first`).
+
     Override / escape hatch: set ``KARNI_ADMIN_AUTODISCOVER = False`` to skip
     the startup autodiscovery entirely (you can still call
     ``karni.admin.autodiscover()`` yourself), or narrow it with
@@ -59,7 +63,30 @@ class KarniAdminConfig(AppConfig):
 
         from karni.admin import autodiscover
 
+        explicit_registrations_first()
         autodiscover()
+
+
+def explicit_registrations_first() -> None:
+    """Run Django's admin autodiscovery now when it would run after Karni's.
+
+    Explicit registration always wins: Karni registers a derived admin only for
+    the models nothing else registered. That needs every app's ``admin.py``
+    imported first, which ``django.contrib.admin``'s ``ready()`` does. When
+    ``karni.admin`` is listed before ``django.contrib.admin`` its ``ready()``
+    runs first, so it imports them itself (Django's later pass finds them
+    imported and does nothing). A project on ``SimpleAdminConfig``, which
+    discovers nothing, is left alone.
+    """
+    from django.apps import apps
+    from django.contrib.admin.apps import AdminConfig
+
+    configs = list(apps.get_app_configs())
+    django_admin = next((c for c in configs if isinstance(c, AdminConfig)), None)
+    if django_admin is None:
+        return
+    if configs.index(django_admin) > configs.index(apps.get_app_config(KarniAdminConfig.label)):
+        django_admin.module.autodiscover()  # type: ignore[union-attr]
 
 
 def use_login_template(site: Any) -> None:

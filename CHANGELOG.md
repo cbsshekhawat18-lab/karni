@@ -25,6 +25,30 @@ apply codemods and list the manual steps. This file is the human summary.
   now also drops and re-adds that index with the column. Escape hatch: `autodetector` on
   the command class, see [fields](docs/fields.md#changing-a-generated-field).
 
+- **Fixed: a `KarniModelAdmin` subclass registered by hand keeps the model's `AdminMeta`.**
+  Rule K103 says to use `AdminMeta` or subclass `KarniModelAdmin`, but only the derived
+  admin read `AdminMeta`, and only it got the inlines other models declare with
+  `inline_on`. Now every Karni admin takes them when it is built: each `AdminMeta` option
+  (`list_display`, `per_page`, `read_only`, `extra`, ...) and the `inline_on` inlines the
+  class does not set itself, where a parent class or a mixin of it counts as the class.
+  The classmethods `admin_meta_options(model)` and `derive_inlines(model)` are the hooks
+  (return `{}` or `[]` to keep an admin class off them). Every derived admin is configured
+  as before. Admins that change: karni-charts' saved charts list the columns and search
+  the fields `Chart.AdminMeta` names. `inlines` in `AdminMeta.extra` now replaces the
+  `inline_on` ones, as `karni.admin.inlines` always said, and `build_model_admin()` without
+  `inlines` adds the declared ones. The class `build_model_admin()` returns no longer
+  holds the `AdminMeta` values as class attributes: its admins do.
+
+- **Added: `AdminMeta.mixins`**, classes or dotted paths put in front of the derived admin,
+  so a model adds methods or templates to its admin (a block under the form, its own
+  `save_model`) without registering one by hand. A path that cannot be imported, an entry
+  that is not a class, or mixins that cannot be combined stop startup with `E306`. See
+  [the admin](docs/admin.md#adding-behaviour-adminmetamixins).
+
+- **Fixed: `karni.admin` listed before `django.contrib.admin` no longer fails startup**
+  with `AlreadyRegistered`. Karni runs Django's admin autodiscovery first in that order,
+  so every app's `admin.py` registers before Karni derives the rest.
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web

@@ -1125,6 +1125,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Run manage.py makemigrations --merge for the app, then karni build again.
 
+<a id="e306"></a>
+
+#### E306: AdminMeta.mixins names something that is not a usable class
+
+*exception* · from `karni.admin.derive.admin_meta_mixins`
+
+**Why Karni objects.** The derived admin is built with these classes in front of it, so each entry must import to a class, and together they must combine with KarniModelAdmin into one class.
+
+**Fix.** List classes or dotted paths to classes: class AdminMeta: mixins = ['shop.admin_mixins.TotalsPanel']. Keep the mixins in a module that imports without errors, and give two mixins no base classes that conflict.
+
 <a id="e310"></a>
 
 #### E310: A module's manifest does not match the module
@@ -6715,11 +6725,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `admin-convention`
 
-**Rule.** Do not register a plain `ModelAdmin`. Declare `AdminMeta` on the model (the admin is derived), or subclass `karni.admin.KarniModelAdmin`.
+**Rule.** Do not register a plain `ModelAdmin`. Declare `AdminMeta` on the model (the admin is derived, and `AdminMeta.mixins` adds methods or templates to it), or subclass `karni.admin.KarniModelAdmin` (it keeps the model's `AdminMeta` for what it does not set).
 
 **Why Karni objects.** The derived admin stays consistent with the model and the API.
 
-**Fix.** Delete the admin class and use AdminMeta, or subclass KarniModelAdmin.
+**Fix.** Delete the admin class and use AdminMeta (put added behaviour in a mixin listed in AdminMeta.mixins), or subclass KarniModelAdmin.
 
 <a id="k104"></a>
 

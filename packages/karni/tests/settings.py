@@ -140,6 +140,12 @@ if os.environ.get("KARNI_TEST_USER_PK") == "bigint":
     if importlib.util.find_spec("django_otp") is not None:
         INSTALLED_APPS += ["django_otp", "django_otp.plugins.otp_totp"]  # type: ignore[name-defined]  # noqa: F821
 
+# Karni's admin discovery before Django's: karni.admin listed before django.contrib.admin,
+# which tests/admin/test_admin_meta.py starts in a subprocess with this variable.
+if os.environ.get("KARNI_TEST_ADMIN_FIRST") == "1":
+    INSTALLED_APPS.remove("karni.admin")  # type: ignore[name-defined]  # noqa: F821
+    INSTALLED_APPS.insert(INSTALLED_APPS.index("django.contrib.admin"), "karni.admin")  # type: ignore[name-defined]  # noqa: F821
+
 # Demo mode's middlewares do nothing while KARNI_DEMO_MODE is off (tests/demo/).
 MIDDLEWARE += [  # type: ignore[name-defined]  # noqa: F821
     "karni.demo.middleware.DemoResetMiddleware",

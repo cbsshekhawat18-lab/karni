@@ -1430,6 +1430,19 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "to be latest (two branches) leave no single one to follow.",
         "Run manage.py makemigrations --merge for the app, then karni build again.",
     ),
+    # E306 admin, continued
+    _e(
+        "E306",
+        "AdminMeta.mixins names something that is not a usable class",
+        "exception",
+        "karni.admin.derive.admin_meta_mixins",
+        "The derived admin is built with these classes in front of it, so each entry must "
+        "import to a class, and together they must combine with KarniModelAdmin into one "
+        "class.",
+        "List classes or dotted paths to classes: class AdminMeta: mixins = "
+        "['shop.admin_mixins.TotalsPanel']. Keep the mixins in a module that imports without "
+        "errors, and give two mixins no base classes that conflict.",
+    ),
     # E31x the module catalog
     _e(
         "E310",

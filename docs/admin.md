@@ -151,7 +151,10 @@ and accepts `site=` for custom sites.
 
 `karni_settings()` places `unfold` before `django.contrib.admin` (validation
 enforces this even for a hand-written `INSTALLED_APPS`) and `karni.admin`
-last. Keep `karni.admin` last. An app listed *after* it whose `ready()`
+last. Every app's `admin.py` is imported before Karni derives anything, also
+when `karni.admin` is listed before `django.contrib.admin`: Karni then runs
+Django's admin autodiscovery itself first. Keep `karni.admin` last anyway. An
+app listed *after* it whose `ready()` (not its `admin.py`)
 registers admins will hit `AlreadyRegistered` against the auto-derived admin.
 Either keep such apps before `karni.admin` or exclude their models via
 `KARNI_ADMIN_EXCLUDE`. (`unfold.contrib.filters` is not installed in v0.1.
@@ -201,17 +204,88 @@ class Invoice(BaseModel):
 ```
 
 Other recognized attrs are `exclude = True` (skip registration),
-`inline_on = "fk_field"` and `register = True` (opt an `AbstractBaseUser`
-subclass in). `inline_on` goes on the child side and generates a
-`TabularInline` on the parent's admin. A list of FK names is allowed, and the
-child stays registered on its own too. A tabular inline names its columns
-only in the table head, so Karni gives each input of its rows an
-`aria-label` with the column's name (`karni.admin.inlines.label_tabular_fields`,
-which `KarniInlineMixin` calls for a tabular inline of your own too). `extra` is the catch-all escape hatch:
-it takes anything a `ModelAdmin` accepts.
+`inline_on = "fk_field"`, `mixins` (below) and `register = True` (opt an
+`AbstractBaseUser` subclass in). `inline_on` goes on the child side and
+generates a `TabularInline` on the parent's admin. A list of FK names is
+allowed, and the child stays registered on its own too. A tabular inline
+names its columns only in the table head, so Karni gives each input of its
+rows an `aria-label` with the column's name
+(`karni.admin.inlines.label_tabular_fields`, which `KarniInlineMixin` calls
+for a tabular inline of your own too). `extra` is the catch-all escape hatch:
+it takes anything a `ModelAdmin` accepts, functions included (they become
+methods of the admin). `inlines` in `extra` replaces the ones `inline_on`
+declares.
 
-Precedence: explicit `admin.site.register` (project `admin.py`) >
-`AdminMeta` > derived defaults.
+Precedence: an admin registered by hand (project `admin.py`) is used instead
+of the derived one. Within any Karni admin, what its class sets (or a parent
+class or mixin of it) > `AdminMeta` > derived defaults.
+
+### Adding behaviour: `AdminMeta.mixins`
+
+To give the derived admin a method or a template of your own, list mixins on
+the model instead of registering an admin by hand. Each entry is a dotted
+path or a class. They go in front of the derived class, in the order written,
+so their methods run first and reach Karni's through `super()`:
+
+```python
+# shop/models.py
+class Invoice(BaseModel):
+    ...
+    class AdminMeta:
+        list_display = ["number", "customer", "total"]
+        mixins = ["shop.admin_mixins.TotalsPanel"]
+```
+
+```python
+# shop/admin_mixins.py
+class TotalsPanel:
+    change_form_after_template = "shop/totals_panel.html"  # a block under the form
+
+    def render_change_form(self, request, context, *args, **kwargs):
+        context["totals"] = totals_for(kwargs.get("obj"))
+        return super().render_change_form(request, context, *args, **kwargs)
+
+    def save_model(self, request, obj, form, change):
+        obj.recalculate()
+        super().save_model(request, obj, form, change)
+```
+
+The rest of `AdminMeta` still applies, and an attribute the mixin sets wins
+over it. A path that cannot be imported, an entry that is not a class, or
+mixins whose bases cannot be combined stop startup with
+[`E306`](errors.md#e306). Keep mixins in a module that registers no admin of
+its own, such as `admin_mixins.py`. Mixins are for the derived admin: an
+admin registered by hand names its mixins in its own bases.
+
+### A subclass registered by hand
+
+A `KarniModelAdmin` subclass you register yourself keeps the model's
+configuration. It takes each `AdminMeta` option it does not set itself
+(`list_display`, `per_page`, `read_only`, `extra`, ...) and the inlines other
+models declare with `inline_on`, and derives the rest. Here the columns, the
+rows per page and the inline of the invoice's lines still come from the
+models:
+
+```python
+# shop/admin.py
+from django.contrib import admin
+from karni.admin import KarniModelAdmin
+from shop.models import Invoice
+
+@admin.register(Invoice)
+class InvoiceAdmin(KarniModelAdmin):
+    actions = ["send_reminder"]  # its own: wins over AdminMeta.extra
+
+    @admin.action(description="Send a reminder")
+    def send_reminder(self, request, queryset): ...
+```
+
+An attribute counts as set when the class, a parent class or a mixin of it
+declares it. A class that sets `inlines` keeps exactly those, and
+`self.derive_inlines(self.model)` gives the declared ones to add in
+`get_inlines()`. The classmethods `admin_meta_options(model)` and
+`derive_inlines(model)` are the hooks: return `{}` or `[]` to keep one admin
+class off `AdminMeta` or `inline_on`.
 
 ## Who may open a page
 

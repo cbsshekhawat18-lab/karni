@@ -20,10 +20,12 @@ Override / escape hatches, weakest to strongest:
 * per model: an inner ``class AdminMeta`` (mirrors ``APIMeta``) with any of
   ``exclude``, ``register``, ``list_display``, ``list_filter``,
   ``search_fields``, ``read_only``, ``date_hierarchy``, ``ordering``,
-  ``inline_on`` and the catch-all ``extra`` dict of ``ModelAdmin`` attributes.
+  ``per_page``, ``inline_on``, ``mixins`` (classes put in front of the derived
+  admin) and the catch-all ``extra`` dict of ``ModelAdmin`` attributes.
 * per project: register the model yourself in an ``admin.py`` — autodiscover
   never touches an already-registered model — or subclass ``KarniModelAdmin``
-  and override its ``derive_*`` hooks.
+  and override its ``derive_*`` hooks. A ``KarniModelAdmin`` subclass still
+  takes the ``AdminMeta`` options and ``inline_on`` inlines it does not set.
 
 Known v0.1 scope limits (documented, not bugs): third-party apps that
 self-register (celery beat/results, the JWT token blacklist, ``auth.Group``)
@@ -147,7 +149,6 @@ def autodiscover(site: AdminSite | None = None) -> None:
 
     from karni.admin.base import build_model_admin
     from karni.admin.derive import derive_autocomplete_fields
-    from karni.admin.inlines import build_inline, collect_inlines
 
     if site is None:
         site_path: str = getattr(settings, "KARNI_ADMIN_SITE", "django.contrib.admin.site")
@@ -156,10 +157,7 @@ def autodiscover(site: AdminSite | None = None) -> None:
         site = import_setting("KARNI_ADMIN_SITE", site_path)
 
     exclude = frozenset(getattr(settings, "KARNI_ADMIN_EXCLUDE", DEFAULT_ADMIN_EXCLUDE))
-    all_models = django_apps.get_models()
-    inline_map = collect_inlines(all_models)
-
-    for model in all_models:
+    for model in django_apps.get_models():
         if site.is_registered(model):
             # Explicit registrations (project admin.py, third-party apps,
             # earlier autodiscover calls) always win; log the skip so a
@@ -173,8 +171,7 @@ def autodiscover(site: AdminSite | None = None) -> None:
             continue
         if _is_excluded(model, exclude):
             continue
-        inlines = [build_inline(child, fk_name) for child, fk_name in inline_map.get(model, [])]
-        site.register(model, build_model_admin(model, inlines=inlines))
+        site.register(model, build_model_admin(model))
 
     from karni.admin.plurals import apply_plurals
 

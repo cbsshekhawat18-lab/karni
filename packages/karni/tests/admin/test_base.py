@@ -92,9 +92,9 @@ class TestBuildModelAdmin:
     ) -> None:
         meta = type("AdminMeta", (), {"extra": {"autocomplete_fields": ["category"]}})
         monkeypatch.setattr(KitchenSink, "AdminMeta", meta, raising=False)
-        cls = build_model_admin(KitchenSink)
-        assert not cls._karni_autocomplete_managed
-        assert cls.autocomplete_fields == ["category"]
+        model_admin = build_model_admin(KitchenSink)(KitchenSink, admin.AdminSite())
+        assert not model_admin._karni_autocomplete_managed
+        assert model_admin.autocomplete_fields == ["category"]
 
     def test_explicit_none_date_hierarchy_disables_the_drilldown(
         self, monkeypatch: pytest.MonkeyPatch, scratch_site: admin.AdminSite

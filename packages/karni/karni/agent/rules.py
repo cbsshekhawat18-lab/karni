@@ -824,10 +824,15 @@ RULES: tuple[Rule, ...] = (
         summary="No ModelAdmin. Use AdminMeta.",
         rule=(
             "Do not register a plain `ModelAdmin`. Declare `AdminMeta` on the model (the "
-            "admin is derived), or subclass `karni.admin.KarniModelAdmin`."
+            "admin is derived, and `AdminMeta.mixins` adds methods or templates to it), or "
+            "subclass `karni.admin.KarniModelAdmin` (it keeps the model's `AdminMeta` for "
+            "what it does not set)."
         ),
         rationale="The derived admin stays consistent with the model and the API.",
-        fix="Delete the admin class and use AdminMeta, or subclass KarniModelAdmin.",
+        fix=(
+            "Delete the admin class and use AdminMeta (put added behaviour in a mixin listed "
+            "in AdminMeta.mixins), or subclass KarniModelAdmin."
+        ),
         enforced_by=("admin-convention",),
     ),
     Rule(

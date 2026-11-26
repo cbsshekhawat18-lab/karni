@@ -2742,6 +2742,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E303`](errors.md#e303) | exception | KARNI_ADMIN_LOGO is not a logo declaration |
 | [`E304`](errors.md#e304) | exception | karni_makemigrations --renames is not a rename list |
 | [`E305`](errors.md#e305) | exception | An app has more than one latest migration, so the renames have no place |
+| [`E306`](errors.md#e306) | exception | AdminMeta.mixins names something that is not a usable class |
 | [`E310`](errors.md#e310) | test | A module's manifest does not match the module |
 | [`E320`](errors.md#e320) | check | A preferences lock or default names nothing, or a value its field refuses |
 | [`E321`](errors.md#e321) | exception | A settings section cannot be registered |
